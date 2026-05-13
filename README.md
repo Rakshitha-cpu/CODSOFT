@@ -16,6 +16,12 @@ A simple Python chatbot that responds to user inputs using predefined rules, if-
 
 
 
+\### Task 2: Tic-Tac-Toe AI
+
+A Tic-Tac-Toe game where a human player plays against an AI. The project includes Easy Mode using random moves and Hard Mode using the Minimax algorithm, making the AI unbeatable.
+
+
+
 \## Technologies Used
 
 \- Python
