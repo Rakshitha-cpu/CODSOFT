@@ -22,6 +22,12 @@ A Tic-Tac-Toe game where a human player plays against an AI. The project include
 
 
 
+\### Task 3: Image Captioning AI
+
+An image captioning application that uses a pre-trained BLIP transformer model to generate natural language captions for uploaded images. The project includes image upload, caption suggestions, editable final captions, caption history, and a Streamlit frontend.
+
+
+
 \## Technologies Used
 
 \- Python
