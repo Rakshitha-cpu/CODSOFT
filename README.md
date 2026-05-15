@@ -28,6 +28,22 @@ An image captioning application that uses a pre-trained BLIP transformer model t
 
 
 
+\### Task 4: Smart Job Recommendation System
+
+
+
+A job recommendation system that suggests suitable job roles based on candidate skills, preferred location, experience level, and job similarity.
+
+
+
+The project uses content-based filtering with TF-IDF vectorization and cosine similarity. It also includes skill gap analysis to show matched skills and missing skills for each recommended job.
+
+
+
+\*\*Technologies Used:\*\* Python, Streamlit, Pandas, Scikit-learn, TF-IDF, Cosine Similarity
+
+
+
 \## Technologies Used
 
 \- Python

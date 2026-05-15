@@ -1,0 +1,26 @@
+job_id,job_title,company,location,experience_level,skills,description
+1,Frontend Developer,TechNova,Bangalore,Entry Level,HTML CSS JavaScript React,Build responsive web interfaces using HTML CSS JavaScript and React
+2,Backend Developer,CodeCraft,Hyderabad,Entry Level,Python Django Flask SQL,Develop backend APIs databases and server side application logic
+3,Full Stack Developer,WebWorks,Bangalore,Mid Level,HTML CSS JavaScript React Node SQL,Work on frontend and backend development for web applications
+4,Data Analyst,DataMind,Pune,Entry Level,Python Excel SQL PowerBI,Analyze business data create dashboards and generate insights
+5,Data Scientist,AIWorks,Bangalore,Mid Level,Python Machine Learning Pandas NumPy Scikit-learn,Build machine learning models and analyze large datasets
+6,Machine Learning Engineer,NeuroTech,Hyderabad,Mid Level,Python Machine Learning Deep Learning TensorFlow PyTorch,Develop and deploy machine learning and deep learning models
+7,AI Engineer,VisionAI,Bangalore,Mid Level,Python NLP Computer Vision Transformers Deep Learning,Build AI systems using NLP computer vision and transformer models
+8,Software Engineer,SoftEdge,Chennai,Entry Level,Java Python DSA SQL,Develop software applications solve coding problems and work with databases
+9,Cloud Engineer,CloudNet,Pune,Mid Level,AWS Azure Docker Kubernetes Linux,Manage cloud infrastructure containers and deployment pipelines
+10,DevOps Engineer,DeployPro,Bangalore,Mid Level,Docker Kubernetes Jenkins AWS Linux,Automate deployment pipelines and manage cloud infrastructure
+11,Cybersecurity Analyst,SecureLayer,Delhi,Entry Level,Networking Linux Security SOC SIEM,Monitor security alerts analyze threats and protect systems
+12,UI UX Designer,DesignHub,Remote,Entry Level,Figma Wireframing Prototyping User Research,Create user friendly designs wireframes and prototypes
+13,Mobile App Developer,AppNest,Hyderabad,Entry Level,Flutter Dart Firebase Android,Build mobile applications using Flutter and Firebase
+14,Android Developer,MobileSoft,Bangalore,Entry Level,Java Kotlin Android Studio Firebase,Develop Android applications with clean UI and backend integration
+15,Database Administrator,DataCore,Chennai,Mid Level,SQL MySQL PostgreSQL Database Management,Manage databases optimize queries and ensure data security
+16,Business Analyst,BizLogic,Pune,Entry Level,Excel SQL Communication Documentation,Analyze business requirements prepare reports and coordinate with teams
+17,Python Developer,PyTech,Remote,Entry Level,Python Flask Django APIs SQL,Build Python applications APIs and database driven systems
+18,NLP Engineer,LanguageAI,Bangalore,Mid Level,Python NLP Transformers Machine Learning,Build natural language processing systems using transformer models
+19,Computer Vision Engineer,VisionLabs,Hyderabad,Mid Level,Python OpenCV Deep Learning CNN Computer Vision,Develop image processing and computer vision applications
+20,QA Tester,QualitySoft,Chennai,Entry Level,Manual Testing Selenium Test Cases Bug Reporting,Test software applications write test cases and report bugs
+21,React Developer,UIForge,Remote,Entry Level,React JavaScript HTML CSS REST API,Build modern frontend applications using React and APIs
+22,Java Developer,EnterpriseSoft,Bangalore,Entry Level,Java Spring Boot SQL OOP,Develop enterprise applications using Java and Spring Boot
+23,Power BI Developer,InsightCorp,Pune,Entry Level,PowerBI SQL Excel Data Visualization,Create dashboards reports and business intelligence solutions
+24,Data Engineer,PipelineAI,Bangalore,Mid Level,Python SQL Spark ETL Data Pipeline,Build data pipelines ETL workflows and scalable data systems
+25,Technical Support Engineer,SupportX,Delhi,Entry Level,Troubleshooting Networking Communication Windows,Support customers troubleshoot technical issues and resolve problems
