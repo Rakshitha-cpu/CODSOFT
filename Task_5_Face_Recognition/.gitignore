@@ -1,0 +1,11 @@
+dataset/*
+trained_model/*
+attendance_logs/*
+
+!dataset/.gitkeep
+!trained_model/.gitkeep
+!attendance_logs/.gitkeep
+
+__pycache__/
+*.pyc
+.env
