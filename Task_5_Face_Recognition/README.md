@@ -1,6 +1,4 @@
 
-
-````markdown
 # 🧠 Task 5: FaceVision AI — Face Detection & Recognition System
 
 <div align="center">
@@ -8,7 +6,8 @@
 ![Python](https://img.shields.io/badge/Python-3.x-3776AB?style=for-the-badge&logo=python&logoColor=white)
 ![Streamlit](https://img.shields.io/badge/Frontend-Streamlit-FF4B4B?style=for-the-badge&logo=streamlit&logoColor=white)
 ![OpenCV](https://img.shields.io/badge/OpenCV-Computer%20Vision-5C3EE8?style=for-the-badge&logo=opencv&logoColor=white)
-![AI](https://img.shields.io/badge/AI-Face%20Recognition-00D4AA?style=for-the-badge)
+![Face Recognition](https://img.shields.io/badge/AI-Face%20Recognition-00D4AA?style=for-the-badge)
+![Computer Vision](https://img.shields.io/badge/Domain-Computer%20Vision-38BDF8?style=for-the-badge)
 ![Status](https://img.shields.io/badge/Status-Completed-28A745?style=for-the-badge)
 
 **A futuristic face detection and recognition system built using Python, Streamlit, OpenCV, Haar Cascade, and LBPH Face Recognition.**
@@ -16,7 +15,6 @@
 </div>
 
 ---
-
 ## 📌 Project Overview
 
 **FaceVision AI** is an AI-powered computer vision application that detects and recognizes faces from uploaded images or camera input.
