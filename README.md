@@ -1,6 +1,3 @@
-
-
-```markdown
 <div align="center">
 
 <img src="https://readme-typing-svg.herokuapp.com?font=Fira+Code&size=32&pause=1000&color=00D4AA&center=true&vCenter=true&width=600&lines=CodSoft+AI+Internship;Rakshitha+R+%7C+AI+Projects" alt="Typing SVG" />
@@ -118,7 +115,7 @@ A content-based recommendation engine that matches candidates to the most releva
 - 📍 Filter by location and experience level
 - 🔍 Skill gap analysis — matched skills vs. missing skills
 - 📊 Match score percentages for each recommendation
-- 🌐 Interactive recruiter-style Streamlit dashboard
+- 🌐 Interactive Streamlit dashboard
 
 **🛠 Stack:** `Python` `Streamlit` `Pandas` `Scikit-learn` `TF-IDF` `Cosine Similarity`
 
@@ -128,7 +125,7 @@ A content-based recommendation engine that matches candidates to the most releva
 
 > *Register a face. Train the model. Let AI recognize you — in real time.*
 
-A full Computer Vision pipeline for face detection and recognition, built with OpenCV's battle-tested Haar Cascade and LBPH algorithms.
+A full Computer Vision pipeline for face detection and recognition, built with OpenCV's Haar Cascade and LBPH algorithms.
 
 **✨ Features**
 - 📸 Live face detection via webcam
@@ -163,7 +160,7 @@ A full Computer Vision pipeline for face detection and recognition, built with O
 ```bash
 # Clone the repo
 git clone https://github.com/Rakshitha-cpu/CODSOFT.git
-cd codsoft-ai-internship
+cd CODSOFT
 
 # Install dependencies
 pip install -r requirements.txt
@@ -176,8 +173,7 @@ streamlit run task3_image_captioning/app.py
 
 ## 📁 Repository Structure
 
-```
-codsoft-ai-internship/
+CODSOFT/
 │
 ├── 📁 task1_chatbot/               # Rule-Based Chatbot
 ├── 📁 task2_tictactoe/             # Tic-Tac-Toe AI
@@ -186,7 +182,6 @@ codsoft-ai-internship/
 ├── 📁 task5_face_recognition/      # FaceVision AI
 ├── requirements.txt
 └── README.md
-```
 
 ---
 
@@ -198,7 +193,7 @@ codsoft-ai-internship/
 |---|---|
 | 🏢 **Organization** | CodSoft |
 | 🧠 **Domain** | Artificial Intelligence |
-| 📅 **Duration** | [Your Duration Here] |
+| 📅 **Duration** | 10 May 2025 – 10 June 2025 |
 | 🌐 **Mode** | Remote |
 
 <br/>
@@ -214,6 +209,3 @@ codsoft-ai-internship/
 **Made with ❤️ and lots of ☕ by Rakshitha R**
 
 </div>
-```
-
----
