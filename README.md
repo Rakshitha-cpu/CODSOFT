@@ -173,6 +173,7 @@ streamlit run task3_image_captioning/app.py
 
 ## 📁 Repository Structure
 
+```
 CODSOFT/
 │
 ├── 📁 task1_chatbot/               # Rule-Based Chatbot
@@ -182,6 +183,7 @@ CODSOFT/
 ├── 📁 task5_face_recognition/      # FaceVision AI
 ├── requirements.txt
 └── README.md
+```
 
 ---
 
