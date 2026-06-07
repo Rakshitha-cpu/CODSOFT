@@ -107,9 +107,12 @@ Crop detected faces
 Draw bounding boxes around faces
 Prepare face samples for training
 ```
+---
+## 🎥 Demo Video
+👉 [Watch Video-https://drive.google.com/file/d/1-TCl4iZl6UJ7AKJ__znD0Jsv2s5VC2uZ/view?usp=drivesdk]
 
 ---
-
+---
 ### 2. LBPH Face Recognizer
 
 LBPH stands for **Local Binary Patterns Histograms**.
