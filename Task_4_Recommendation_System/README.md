@@ -181,9 +181,12 @@ pip install -r requirements.txt
 ```bash
 streamlit run app.py
 ```
+---
+## 🎥 Demo Video
+👉 [Watch Video-https://drive.google.com/file/d/16o8e7KF0spgmrZXUGwqOVwwcP--VREdF/view?usp=drivesdk]
 
 ---
-
+---
 ## 🧪 Sample Inputs
 
 - Python SQL Machine Learning
