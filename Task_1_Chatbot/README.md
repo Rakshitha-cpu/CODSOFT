@@ -150,6 +150,13 @@ Task_1_Chatbot/
 
 ---
 
+##ScreenShots
+<img width="1280" height="612" alt="image" src="https://github.com/user-attachments/assets/6922a461-303d-40c9-be42-3a4561b66822" />
+<img width="1280" height="756" alt="image" src="https://github.com/user-attachments/assets/bec1276d-b061-4217-bcf3-496a5cdf87e3" />
+
+
+---
+---
 ## 📚 What I Learned
 
 - ✅ How rule-based chatbots work using keyword matching
