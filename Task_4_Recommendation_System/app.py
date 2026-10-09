@@ -1,6 +1,4 @@
 from pathlib import Path
-from textwrap import dedent
-import html
 
 import pandas as pd
 import streamlit as st
@@ -8,786 +6,523 @@ import streamlit as st
 from recommender import JobRecommender
 
 
-# =========================================================
+# ---------------------------------------------------------
 # PAGE CONFIGURATION
-# =========================================================
+# ---------------------------------------------------------
 
 st.set_page_config(
     page_title="Smart Job Recommendation System",
-    page_icon="🎯",
+    page_icon="💼",
     layout="wide",
+    initial_sidebar_state="expanded",
 )
 
 
-# =========================================================
-# HTML AND DISPLAY HELPERS
-# =========================================================
+# ---------------------------------------------------------
+# NATIVE STREAMLIT STYLING
+# No HTML strings or custom HTML cards are used.
+# ---------------------------------------------------------
 
-def render_html(content):
-    """Render HTML without accidentally creating a Markdown code block."""
-    st.markdown(
-        dedent(content).strip(),
-        unsafe_allow_html=True,
-    )
-
-
-def safe_text(value, default="Not specified"):
-    """Escape dynamic text before inserting it into HTML."""
-    if value is None:
-        return default
-
-    try:
-        if pd.isna(value):
-            return default
-    except (TypeError, ValueError):
-        pass
-
-    value = str(value).strip()
-
-    if not value:
-        return default
-
-    return html.escape(value)
-
-
-def get_value(row, column, default="Not specified"):
-    if column not in row.index:
-        return default
-    return row[column]
-
-
-def display_skills(value):
-    """Format skill lists and comma-separated skills for display."""
-    if value is None:
-        return "None"
-
-    try:
-        if pd.isna(value):
-            return "None"
-    except (TypeError, ValueError):
-        pass
-
-    if isinstance(value, (list, tuple, set)):
-        items = [
-            str(item).strip()
-            for item in value
-            if str(item).strip()
-        ]
-    else:
-        text = str(value).strip()
-
-        if text.lower() in {"", "none", "nan", "[]"}:
-            return "None"
-
-        text = text.strip("[]")
-
-        items = [
-            item.strip().strip("'\"")
-            for item in text.replace(";", ",").split(",")
-            if item.strip().strip("'\"")
-        ]
-
-    if not items:
-        return "None"
-
-    return html.escape(", ".join(items))
-
-
-def format_score(value):
-    """Format a valid match score."""
-    try:
-        score = float(value)
-    except (TypeError, ValueError):
-        return None
-
-    if not pd.notna(score):
-        return None
-
-    return max(0.0, min(100.0, score))
-
-
-# =========================================================
-# STYLING
-# =========================================================
-
-render_html(
+st.markdown(
     """
     <style>
-    .stApp {
-        background: linear-gradient(135deg, #f5f7ff, #eef2ff);
-    }
-
     .block-container {
-        max-width: 1200px;
         padding-top: 2rem;
         padding-bottom: 3rem;
+        max-width: 1250px;
     }
 
-    .hero {
-        background: linear-gradient(120deg, #312e81, #4f46e5, #7c3aed);
-        color: white;
-        padding: 35px;
-        border-radius: 22px;
-        margin-bottom: 25px;
-        box-shadow: 0 12px 30px rgba(79,70,229,.16);
+    h1, h2, h3 {
+        letter-spacing: -0.4px;
     }
 
-    .hero-label {
-        color: #ddd6fe;
-        text-transform: uppercase;
-        letter-spacing: 3px;
-        font-size: 12px;
-        font-weight: bold;
-        margin-bottom: 12px;
-    }
-
-    .hero-title {
-        font-size: 35px;
-        font-weight: 800;
-        line-height: 1.25;
-        margin-bottom: 12px;
-    }
-
-    .hero-subtitle {
-        font-size: 15px;
-        line-height: 1.8;
-        color: #ede9fe;
-    }
-
-    .badge-row {
-        display: flex;
-        flex-wrap: wrap;
-        gap: 8px;
-        margin-top: 20px;
-    }
-
-    .badge {
-        background: rgba(255,255,255,.15);
-        border: 1px solid rgba(255,255,255,.3);
-        padding: 8px 12px;
-        border-radius: 20px;
-        font-size: 12px;
-        color: white;
-    }
-
-    .feature-card {
-        background: white;
-        border: 1px solid #e5e7eb;
-        border-radius: 16px;
-        padding: 20px;
-        min-height: 150px;
-        margin-bottom: 15px;
-        box-shadow: 0 5px 18px rgba(31,41,55,.04);
-    }
-
-    .feature-icon {
-        font-size: 28px;
-        margin-bottom: 8px;
-    }
-
-    .feature-title {
-        color: #312e81;
-        font-size: 16px;
-        font-weight: bold;
-        margin-bottom: 8px;
-    }
-
-    .feature-text {
-        color: #64748b;
-        font-size: 13px;
-        line-height: 1.7;
-    }
-
-    .section-heading {
-        color: #1e1b4b;
-        font-size: 24px;
-        font-weight: 800;
-        margin-top: 28px;
-        margin-bottom: 15px;
-    }
-
-    .info-panel {
-        background: #eef2ff;
-        border: 1px solid #c7d2fe;
-        border-radius: 14px;
-        padding: 18px;
-        color: #312e81;
-        line-height: 1.9;
-        margin: 12px 0;
-    }
-
-    .metric-card {
-        background: white;
-        border: 1px solid #e5e7eb;
-        border-radius: 15px;
-        padding: 20px;
-        margin: 10px 0;
-        box-shadow: 0 4px 15px rgba(31,41,55,.04);
-    }
-
-    .metric-label {
-        color: #64748b;
-        font-size: 12px;
-        font-weight: bold;
-        letter-spacing: 1px;
-    }
-
-    .metric-value {
-        color: #4f46e5;
-        font-size: 28px;
-        font-weight: 800;
-        margin-top: 8px;
-    }
-
-    .job-card {
-        background: white;
-        border: 1px solid #e2e8f0;
-        border-radius: 18px;
-        padding: 24px;
-        margin: 16px 0;
-        box-shadow: 0 5px 18px rgba(31,41,55,.05);
-    }
-
-    .job-rank {
-        display: inline-block;
-        background: #ede9fe;
-        color: #5b21b6;
-        padding: 5px 10px;
-        border-radius: 8px;
-        font-size: 12px;
-        font-weight: bold;
-        margin-bottom: 8px;
-    }
-
-    .job-top {
-        display: flex;
-        justify-content: space-between;
-        align-items: flex-start;
-        gap: 15px;
-    }
-
-    .job-title {
-        color: #1e1b4b;
-        font-size: 22px;
-        font-weight: 800;
-        margin-bottom: 6px;
-    }
-
-    .job-meta {
-        color: #64748b;
-        font-size: 13px;
-        margin-bottom: 15px;
-    }
-
-    .score-number {
-        color: #4f46e5;
-        font-size: 25px;
-        font-weight: 800;
-        text-align: right;
-        white-space: nowrap;
-    }
-
-    .score-label {
-        color: #64748b;
-        font-size: 11px;
-        text-align: right;
-    }
-
-    .score-track {
-        background: #e9eaf5;
-        height: 9px;
-        border-radius: 20px;
-        overflow: hidden;
-        margin: 12px 0 18px;
-    }
-
-    .score-fill {
-        background: linear-gradient(90deg, #6366f1, #8b5cf6);
-        height: 9px;
-        border-radius: 20px;
-    }
-
-    .job-desc {
-        color: #475569;
-        font-size: 14px;
-        line-height: 1.7;
-        margin-bottom: 15px;
-    }
-
-    .pill-row {
-        display: flex;
-        flex-wrap: wrap;
-        gap: 8px;
-        margin-bottom: 18px;
-    }
-
-    .pill {
-        background: #f1f5f9;
-        color: #475569;
-        padding: 7px 11px;
-        border-radius: 20px;
-        font-size: 12px;
-    }
-
-    .skill-grid {
-        display: grid;
-        grid-template-columns: repeat(3, minmax(0, 1fr));
-        gap: 12px;
-    }
-
-    .skill-box {
-        padding: 13px;
+    [data-testid="stMetric"] {
+        background-color: rgba(128, 128, 128, 0.08);
+        padding: 16px;
         border-radius: 12px;
-        font-size: 12px;
-        line-height: 1.8;
-        overflow-wrap: anywhere;
+        border: 1px solid rgba(128, 128, 128, 0.18);
     }
 
-    .skill-box b {
-        display: block;
-        margin-bottom: 5px;
-    }
-
-    .required {
-        background: #f1f5f9;
-        color: #334155;
-    }
-
-    .matched {
-        background: #dcfce7;
-        color: #166534;
-    }
-
-    .missing {
-        background: #ffedd5;
-        color: #9a3412;
-    }
-
-    .footer {
-        color: #64748b;
-        text-align: center;
-        padding: 30px 0 10px;
-        font-size: 12px;
-    }
-
-    @media (max-width: 700px) {
-        .hero {
-            padding: 22px;
-        }
-
-        .hero-title {
-            font-size: 27px;
-        }
-
-        .skill-grid {
-            grid-template-columns: 1fr;
-        }
+    div[data-testid="stVerticalBlockBorderWrapper"] {
+        border-radius: 14px;
     }
     </style>
-    """
+    """,
+    unsafe_allow_html=True,
 )
 
 
-# =========================================================
-# HERO
-# =========================================================
+# ---------------------------------------------------------
+# PATHS AND DATA LOADING
+# ---------------------------------------------------------
 
-render_html(
-    """
-    <div class="hero">
-        <div class="hero-label">AI-Powered Career Matching</div>
+BASE_DIR = Path(__file__).resolve().parent
+DATA_PATH = BASE_DIR / "jobs.csv"
 
-        <div class="hero-title">
-            Smart Job Recommendation System
-        </div>
-
-        <div class="hero-subtitle">
-            Discover suitable job opportunities using your skills,
-            preferred location, experience level, and intelligent
-            content-based recommendations.
-        </div>
-
-        <div class="badge-row">
-            <span class="badge">Content-Based Filtering</span>
-            <span class="badge">TF-IDF Vectorization</span>
-            <span class="badge">Cosine Similarity</span>
-            <span class="badge">Skill Gap Analysis</span>
-            <span class="badge">Match Scoring</span>
-        </div>
-    </div>
-    """
-)
-
-
-# =========================================================
-# FEATURE CARDS
-# =========================================================
-
-feature_columns = st.columns(3)
-
-features = [
-    (
-        "🎯",
-        "Personalized Matching",
-        "Find jobs based on your skills, preferred role, experience, and location.",
-    ),
-    (
-        "📊",
-        "Match Score",
-        "Compare your skills and profile with job requirements to estimate compatibility.",
-    ),
-    (
-        "🧠",
-        "Skill Gap Analysis",
-        "Identify matching and missing skills to plan your learning journey.",
-    ),
-]
-
-for column, feature in zip(feature_columns, features):
-    icon, title, description = feature
-
-    with column:
-        render_html(
-            f"""
-            <div class="feature-card">
-                <div class="feature-icon">{icon}</div>
-                <div class="feature-title">{title}</div>
-                <div class="feature-text">{description}</div>
-            </div>
-            """
-        )
-
-
-# =========================================================
-# LOAD RECOMMENDER
-# =========================================================
 
 @st.cache_resource
 def load_recommender():
-    dataset_path = Path(__file__).resolve().parent / "jobs.csv"
+    """Load the recommendation engine once."""
 
-    if not dataset_path.exists():
-        raise FileNotFoundError(
-            f"Dataset not found: {dataset_path}. "
-            "Ensure jobs.csv is in the same folder as app.py."
-        )
-
-    try:
-        return JobRecommender(data_path=str(dataset_path))
-    except TypeError:
-        return JobRecommender()
+    return JobRecommender(data_path=DATA_PATH)
 
 
 try:
     recommender = load_recommender()
+    jobs_df = recommender.jobs_df.copy()
+
+except FileNotFoundError:
+    st.error(
+        "The jobs.csv dataset was not found. "
+        "Place jobs.csv in the same folder as app.py."
+    )
+    st.code(
+        "Task_4_Recommendation_System/\n"
+        "├── app.py\n"
+        "├── recommender.py\n"
+        "├── jobs.csv\n"
+        "└── requirements.txt"
+    )
+    st.stop()
+
 except Exception as error:
-    st.error("Unable to load the recommendation engine.")
+    st.error("The recommendation system could not be initialized.")
     st.exception(error)
     st.stop()
 
 
-jobs_df = getattr(recommender, "jobs", pd.DataFrame())
+# ---------------------------------------------------------
+# HEADER
+# ---------------------------------------------------------
 
-if not isinstance(jobs_df, pd.DataFrame):
-    jobs_df = pd.DataFrame()
+st.caption("AI-POWERED CAREER MATCHING")
 
+st.title("💼 Smart Job Recommendation System")
 
-# =========================================================
-# CANDIDATE PREFERENCES
-# =========================================================
-
-render_html(
-    '<div class="section-heading">Candidate Preferences</div>'
+st.write(
+    "Discover job opportunities that align with your skills, "
+    "experience, and career interests."
 )
 
-left, right = st.columns(2)
+st.divider()
 
-with left:
-    mode = st.radio(
-        "Recommendation Mode",
-        ["Recommend by Skills", "Recommend by Job Role"],
-        horizontal=True,
+
+# ---------------------------------------------------------
+# DASHBOARD METRICS
+# ---------------------------------------------------------
+
+metric_col1, metric_col2, metric_col3 = st.columns(3)
+
+with metric_col1:
+    st.metric(
+        label="Jobs Available",
+        value=len(jobs_df),
     )
 
-    top_n = st.select_slider(
-        "Number of recommendations",
-        options=[3, 5, 8, 10],
-        value=5,
+with metric_col2:
+    company_count = jobs_df["company"].nunique()
+    st.metric(
+        label="Companies",
+        value=company_count,
     )
 
-with right:
-    if "location" in jobs_df.columns:
-        locations = sorted(
-            jobs_df["location"].dropna().astype(str).unique().tolist()
+with metric_col3:
+    location_count = jobs_df["location"].nunique()
+    st.metric(
+        label="Locations",
+        value=location_count,
+    )
+
+
+st.write("")
+
+
+# ---------------------------------------------------------
+# SIDEBAR FILTERS
+# ---------------------------------------------------------
+
+st.sidebar.title("🎯 Find Your Match")
+
+st.sidebar.write(
+    "Tell us what you are looking for to find relevant jobs."
+)
+
+locations = sorted(
+    value
+    for value in jobs_df["location"].dropna().astype(str).unique()
+    if value.strip()
+)
+
+experiences = sorted(
+    value
+    for value in jobs_df["experience_level"].dropna().astype(str).unique()
+    if value.strip()
+)
+
+location_options = ["All"] + locations
+experience_options = ["All"] + experiences
+
+selected_location = st.sidebar.selectbox(
+    "Preferred Location",
+    options=location_options,
+    index=0,
+)
+
+selected_experience = st.sidebar.selectbox(
+    "Experience Level",
+    options=experience_options,
+    index=0,
+)
+
+top_n = st.sidebar.slider(
+    "Number of Recommendations",
+    min_value=1,
+    max_value=20,
+    value=5,
+)
+
+st.sidebar.divider()
+
+st.sidebar.caption(
+    "Match scores are estimates based on skill overlap "
+    "and text similarity. They are not hiring probabilities."
+)
+
+
+# ---------------------------------------------------------
+# RECOMMENDATION TABS
+# ---------------------------------------------------------
+
+skills_tab, title_tab, browse_tab = st.tabs(
+    [
+        "🧠 Match by Skills",
+        "💼 Match by Job Title",
+        "📋 Browse Jobs",
+    ]
+)
+
+
+# ---------------------------------------------------------
+# HELPER: DISPLAY JOB CARDS
+# ---------------------------------------------------------
+
+def display_job_cards(results):
+    """Display recommendation results using native Streamlit UI."""
+
+    if results is None or results.empty:
+        st.warning(
+            "No matching jobs were found for these filters. "
+            "Try another location or experience level."
         )
-    else:
-        locations = []
+        return
 
-    location_filter = st.selectbox(
-        "Preferred Location",
-        ["All"] + locations,
+    st.success(
+        f"Found {len(results)} job recommendation(s)."
     )
 
-    if "experience_level" in jobs_df.columns:
-        experience_levels = sorted(
-            jobs_df["experience_level"]
-            .dropna()
-            .astype(str)
-            .unique()
-            .tolist()
+    for rank, (_, job) in enumerate(results.iterrows(), start=1):
+        title = str(job.get("job_title", "Untitled Job"))
+        company = str(job.get("company", "Company Not Specified"))
+        location = str(job.get("location", "Not Specified"))
+        experience = str(
+            job.get("experience_level", "Not Specified")
         )
-    else:
-        experience_levels = []
-
-    experience_filter = st.selectbox(
-        "Experience Level",
-        ["All"] + experience_levels,
-    )
-
-
-user_skills = ""
-selected_job = None
-
-if mode == "Recommend by Skills":
-    user_skills = st.text_input(
-        "Enter your skills",
-        placeholder="Python, SQL, Flask, HTML, CSS, Java",
-        help="Enter your skills separated by commas.",
-    )
-
-else:
-    if jobs_df.empty or "job_title" not in jobs_df.columns:
-        st.warning("No job titles found in jobs.csv.")
-    else:
-        job_titles = sorted(
-            jobs_df["job_title"].dropna().astype(str).unique().tolist()
+        description = str(
+            job.get("description", "No description available.")
         )
 
-        if job_titles:
-            selected_job = st.selectbox(
-                "Select a job role you like",
-                job_titles,
-            )
+        try:
+            score = float(job.get("match_score", 0))
+        except (TypeError, ValueError):
+            score = 0.0
 
-            selected_rows = jobs_df[
-                jobs_df["job_title"].astype(str) == selected_job
-            ]
+        score = max(0.0, min(100.0, score))
 
-            if not selected_rows.empty:
-                selected_row = selected_rows.iloc[0]
+        with st.container(border=True):
+            title_col, score_col = st.columns([3, 1])
 
-                render_html(
-                    f"""
-                    <div class="info-panel">
-                        <b>Selected Role:</b> {safe_text(selected_job)}<br>
-                        <b>Company:</b> {safe_text(get_value(selected_row, "company"))}<br>
-                        <b>Location:</b> {safe_text(get_value(selected_row, "location"))}<br>
-                        <b>Experience:</b> {safe_text(get_value(selected_row, "experience_level"))}<br>
-                        <b>Required Skills:</b> {display_skills(get_value(selected_row, "skills", ""))}<br>
-                        <b>Description:</b> {safe_text(get_value(selected_row, "description"))}
-                    </div>
-                    """
+            with title_col:
+                st.subheader(f"{rank}. {title}")
+                st.write(f"🏢 **Company:** {company}")
+
+            with score_col:
+                st.metric(
+                    label="Match Score",
+                    value=f"{score:.2f}%",
                 )
 
+            st.progress(
+                int(round(score)),
+                text=f"Estimated match: {score:.2f}%",
+            )
 
-# =========================================================
-# HOW IT WORKS
-# =========================================================
+            detail_col1, detail_col2 = st.columns(2)
 
-with st.expander("⚙️ How the engine works"):
-    st.markdown(
-        """
-        **1. Job information:** The system uses job titles, skills,
-        experience levels, locations, and descriptions.
+            with detail_col1:
+                st.write(f"📍 **Location:** {location}")
 
-        **2. TF-IDF vectorization:** Text is converted into numerical
-        vectors based on term importance.
+            with detail_col2:
+                st.write(f"🎓 **Experience:** {experience}")
 
-        **3. Cosine similarity:** Textual features are compared to
-        estimate how similar the candidate profile is to each job.
+            st.markdown("**Job Description**")
+            st.write(
+                description
+                if description.strip()
+                else "No description provided."
+            )
 
-        **4. Skill-gap analysis:** Matching and missing skills are
-        shown for each recommended job.
+            matched = str(job.get("matched_skills", "None"))
+            missing = str(job.get("missing_skills", "None"))
 
-        **5. Filtering:** Location and experience preferences narrow
-        the results.
-        """
+            with st.expander("View skill analysis"):
+                st.write("✅ **Matched Skills**")
+                st.write(matched if matched.strip() else "None")
+
+                st.write("📚 **Skills to Learn**")
+                st.write(missing if missing.strip() else "None")
+
+                if score < 30:
+                    st.info(
+                        "This job may require additional skills. "
+                        "Review the missing skills before applying."
+                    )
+                elif score < 70:
+                    st.info(
+                        "You have some relevant skills. "
+                        "Consider strengthening the skills listed above."
+                    )
+                else:
+                    st.success(
+                        "Your profile shows strong alignment "
+                        "with this job's listed skills and text."
+                    )
+
+
+# ---------------------------------------------------------
+# TAB 1: RECOMMEND BY SKILLS
+# ---------------------------------------------------------
+
+with skills_tab:
+    st.header("Find Jobs That Match Your Skills")
+
+    st.write(
+        "Enter your technical skills, separated by commas. "
+        "For example: Python, SQL, Flask, Machine Learning."
     )
 
+    skills_input = st.text_area(
+        "Your Skills",
+        placeholder=(
+            "Python, SQL, Flask, HTML, CSS, JavaScript"
+        ),
+        height=120,
+        key="skills_input",
+    )
 
-# =========================================================
-# RECOMMENDATIONS
-# =========================================================
+    find_skills_button = st.button(
+        "🔍 Find Matching Jobs",
+        type="primary",
+        use_container_width=True,
+        key="find_skills",
+    )
 
-render_html(
-    '<div class="section-heading">Recommended Jobs</div>'
-)
-
-if st.button(
-    "✨ Find Matching Jobs",
-    type="primary",
-    use_container_width=True,
-):
-    try:
-        if mode == "Recommend by Skills":
-            if not user_skills.strip():
-                st.warning("Please enter your skills first.")
-                st.stop()
-
-            results = recommender.recommend_by_skills(
-                user_skills,
-                top_n,
-                location_filter,
-                experience_filter,
+    if find_skills_button:
+        if not skills_input.strip():
+            st.warning(
+                "Please enter at least one skill before searching."
             )
 
         else:
-            if not selected_job:
-                st.warning("Please select a job role.")
-                st.stop()
+            try:
+                with st.spinner("Analyzing your skills..."):
+                    results = recommender.recommend_by_skills(
+                        user_skills=skills_input,
+                        top_n=top_n,
+                        location_filter=selected_location,
+                        experience_filter=selected_experience,
+                    )
 
-            results = recommender.recommend_by_job_title(
-                selected_job,
-                top_n,
-                location_filter,
-                experience_filter,
-            )
+                st.session_state["skill_results"] = results
+                st.session_state["skill_query"] = skills_input
 
-        if not isinstance(results, pd.DataFrame):
-            st.error(
-                "The recommender must return a pandas DataFrame."
-            )
-            st.stop()
+            except Exception as error:
+                st.error("Could not generate skill-based recommendations.")
+                st.exception(error)
 
-        if results.empty:
-            st.warning(
-                "No matching jobs found. Try changing your filters."
-            )
-            st.stop()
+    if "skill_results" in st.session_state:
+        st.divider()
+        st.subheader("Your Skill-Based Recommendations")
 
-        if "match_score" not in results.columns:
-            st.error(
-                "The results do not contain match_score. "
-                "Please check recommender.py."
-            )
-            st.stop()
+        previous_query = st.session_state.get("skill_query", "")
+        st.caption(f"Search query: {previous_query}")
 
-        results = results.copy()
-
-        # Preserve invalid scores as missing so the underlying issue
-        # is visible instead of silently presenting them as valid zeros.
-        results["match_score"] = pd.to_numeric(
-            results["match_score"],
-            errors="coerce",
+        display_job_cards(
+            st.session_state["skill_results"]
         )
 
-        if results["match_score"].isna().all():
-            st.error(
-                "All match scores are missing or non-numeric. "
-                "The scoring logic in recommender.py needs fixing."
+
+# ---------------------------------------------------------
+# TAB 2: RECOMMEND BY JOB TITLE
+# ---------------------------------------------------------
+
+with title_tab:
+    st.header("Explore Jobs by Career Interest")
+
+    st.write(
+        "Enter the role you are interested in. "
+        "The system will compare it with available job titles, "
+        "skills, and descriptions."
+    )
+
+    title_input = st.text_input(
+        "Desired Job Title",
+        placeholder="e.g. Python Developer",
+        key="title_input",
+    )
+
+    find_title_button = st.button(
+        "🔍 Find Similar Jobs",
+        type="primary",
+        use_container_width=True,
+        key="find_title",
+    )
+
+    if find_title_button:
+        if not title_input.strip():
+            st.warning(
+                "Please enter a job title before searching."
             )
-            st.stop()
 
-        results = results.dropna(subset=["match_score"])
-        results["match_score"] = results["match_score"].clip(0, 100)
+        else:
+            try:
+                with st.spinner("Finding relevant opportunities..."):
+                    results = recommender.recommend_by_job_title(
+                        job_title=title_input,
+                        top_n=top_n,
+                        location_filter=selected_location,
+                        experience_filter=selected_experience,
+                    )
 
-        if results.empty:
-            st.warning("No jobs with valid scores were returned.")
-            st.stop()
+                st.session_state["title_results"] = results
+                st.session_state["title_query"] = title_input
 
-        scores = results["match_score"]
+            except Exception as error:
+                st.error("Could not generate job-title recommendations.")
+                st.exception(error)
 
-        metric_columns = st.columns(3)
+    if "title_results" in st.session_state:
+        st.divider()
+        st.subheader("Your Job-Title Recommendations")
 
-        metrics = [
-            ("RESULTS", str(len(results))),
-            ("AVG MATCH", f"{scores.mean():.2f}%"),
-            ("BEST MATCH", f"{scores.max():.2f}%"),
+        previous_title = st.session_state.get("title_query", "")
+        st.caption(f"Search query: {previous_title}")
+
+        display_job_cards(
+            st.session_state["title_results"]
+        )
+
+
+# ---------------------------------------------------------
+# TAB 3: BROWSE ALL JOBS
+# ---------------------------------------------------------
+
+with browse_tab:
+    st.header("Browse Available Opportunities")
+
+    filtered_jobs = jobs_df.copy()
+
+    if selected_location != "All":
+        filtered_jobs = filtered_jobs[
+            filtered_jobs["location"].str.casefold()
+            == selected_location.casefold()
         ]
 
-        for column, metric in zip(metric_columns, metrics):
-            label, value = metric
+    if selected_experience != "All":
+        filtered_jobs = filtered_jobs[
+            filtered_jobs["experience_level"].str.casefold()
+            == selected_experience.casefold()
+        ]
 
-            with column:
-                render_html(
-                    f"""
-                    <div class="metric-card">
-                        <div class="metric-label">{label}</div>
-                        <div class="metric-value">{value}</div>
-                    </div>
-                    """
-                )
+    search_text = st.text_input(
+        "Search jobs or companies",
+        placeholder="e.g. Java, Developer, TechNova",
+        key="browse_search",
+    )
 
-        # Render the job cards.
-        for index, (_, row) in enumerate(
-            results.iterrows(),
-            start=1,
-        ):
-            score = format_score(row["match_score"])
+    if search_text.strip():
+        query = search_text.strip().casefold()
 
-            if score is None:
-                continue
+        searchable_columns = [
+            "job_title",
+            "company",
+            "location",
+            "experience_level",
+            "skills",
+            "description",
+        ]
 
-            job_title = safe_text(get_value(row, "job_title"))
-            company = safe_text(get_value(row, "company"))
-            location = safe_text(get_value(row, "location"))
-            experience = safe_text(
-                get_value(row, "experience_level")
-            )
-            description = safe_text(
-                get_value(row, "description", "No description available.")
-            )
+        mask = pd.Series(
+            False,
+            index=filtered_jobs.index,
+        )
 
-            required_skills = display_skills(
-                get_value(row, "skills", "")
-            )
-            matched_skills = display_skills(
-                get_value(row, "matched_skills", None)
-            )
-            missing_skills = display_skills(
-                get_value(row, "missing_skills", None)
+        for column in searchable_columns:
+            mask = mask | filtered_jobs[column].str.casefold().str.contains(
+                query,
+                regex=False,
+                na=False,
             )
 
-            render_html(
-                f"""
-                <div class="job-card">
-                    <div class="job-top">
-                        <div>
-                            <div class="job-rank">#{index}</div>
-                            <div class="job-title">{job_title}</div>
-                            <div class="job-meta">{company} · {location}</div>
-                        </div>
-                        <div>
-                            <div class="score-number">{score:.2f}%</div>
-                            <div class="score-label">MATCH SCORE</div>
-                        </div>
-                    </div>
+        filtered_jobs = filtered_jobs[mask]
 
-                    <div class="score-track">
-                        <div class="score-fill"
-                             style="width: {score:.2f}%;"></div>
-                    </div>
+    st.caption(
+        f"{len(filtered_jobs)} job(s) match the selected filters."
+    )
 
-                    <div class="job-desc">{description}</div>
+    if filtered_jobs.empty:
+        st.info(
+            "No jobs match your search. Try a different keyword "
+            "or change the sidebar filters."
+        )
 
-                    <div class="pill-row">
-                        <span class="pill">📍 {location}</span>
-                        <span class="pill">⚡ {experience}</span>
-                        <span class="pill">🎯 Match {score:.2f}%</span>
-                    </div>
+    else:
+        display_columns = [
+            "job_title",
+            "company",
+            "location",
+            "experience_level",
+            "skills",
+        ]
 
-                    <div class="skill-grid">
-                        <div class="skill-box required">
-                            <b>Required Skills</b>
-                            {required_skills}
-                        </div>
+        st.dataframe(
+            filtered_jobs[display_columns],
+            use_container_width=True,
+            hide_index=True,
+        )
 
-                        <div class="skill-box matched">
-                            <b>Matched Skills</b>
-                            {matched_skills}
-                        </div>
+        csv_data = filtered_jobs.to_csv(index=False).encode("utf-8")
 
-                        <div class="skill-box missing">
-                            <b>Missing Skills</b>
-                            {missing_skills}
-                        </div>
+        st.download_button(
+            label="⬇️ Download Filtered Jobs as CSV",
+            data=csv_data,
+            file_name="filtered_jobs.csv",
+            mime="text/csv",
+            use_container_width=True,
+        )
+
+
+# ---------------------------------------------------------
+# FOOTER
+# ---------------------------------------------------------
+
+st.divider()
+
+st.caption(
+    "Smart Job Recommendation System | "
+    "Built with Python, Pandas, Scikit-learn, and Streamlit"
+)
+
+st.caption(
+    "Recommendations are informational and depend on the "
+    "quality and completeness of the available job dataset."
+            )
