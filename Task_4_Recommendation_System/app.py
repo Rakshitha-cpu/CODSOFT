@@ -1,108 +1,103 @@
-import html
 from pathlib import Path
+import html
 
-import streamlit as st
 import pandas as pd
+import streamlit as st
 
 from recommender import JobRecommender
 
 
-# --------------------------------------------------
+# ==================================================
 # PAGE CONFIGURATION
-# --------------------------------------------------
+# ==================================================
 
 st.set_page_config(
     page_title="Smart Job Recommendation System",
     page_icon="🎯",
     layout="wide",
-    initial_sidebar_state="expanded",
 )
 
 
-# --------------------------------------------------
-# CUSTOM CSS
-# --------------------------------------------------
+# ==================================================
+# CUSTOM STYLING
+# ==================================================
 
 st.markdown(
     """
     <style>
     .stApp {
-        background: linear-gradient(135deg, #f5f7ff 0%, #eef2ff 100%);
+        background: linear-gradient(135deg, #f5f7ff, #eef2ff);
     }
 
     .block-container {
+        max-width: 1200px;
         padding-top: 2rem;
         padding-bottom: 3rem;
-        max-width: 1250px;
     }
 
     .hero {
-        padding: 35px;
-        border-radius: 24px;
         background: linear-gradient(120deg, #312e81, #4f46e5, #7c3aed);
         color: white;
+        padding: 35px;
+        border-radius: 22px;
         margin-bottom: 25px;
-        box-shadow: 0 12px 30px rgba(79, 70, 229, 0.18);
     }
 
     .hero-label {
+        color: #ddd6fe;
         text-transform: uppercase;
         letter-spacing: 3px;
         font-size: 12px;
-        font-weight: 700;
-        color: #ddd6fe;
+        font-weight: bold;
         margin-bottom: 12px;
     }
 
     .hero-title {
-        font-size: 36px;
+        font-size: 35px;
         font-weight: 800;
-        line-height: 1.2;
         margin-bottom: 12px;
     }
 
     .hero-subtitle {
-        font-size: 16px;
-        line-height: 1.7;
+        font-size: 15px;
+        line-height: 1.8;
         color: #ede9fe;
-        max-width: 750px;
     }
 
     .badge-row {
         display: flex;
         flex-wrap: wrap;
-        gap: 9px;
-        margin-top: 22px;
+        gap: 8px;
+        margin-top: 20px;
     }
 
     .badge {
-        background: rgba(255,255,255,0.13);
-        border: 1px solid rgba(255,255,255,0.25);
-        padding: 8px 13px;
+        background: rgba(255,255,255,0.15);
+        border: 1px solid rgba(255,255,255,0.3);
+        padding: 8px 12px;
         border-radius: 20px;
         font-size: 12px;
-        color: white;
     }
 
     .feature-card {
         background: white;
         border: 1px solid #e5e7eb;
-        border-radius: 17px;
+        border-radius: 16px;
         padding: 20px;
-        min-height: 155px;
-        box-shadow: 0 5px 18px rgba(31,41,55,0.04);
+        min-height: 145px;
+        margin-bottom: 15px;
     }
 
     .feature-icon {
-        font-size: 27px;
+        font-size: 28px;
         margin-bottom: 8px;
     }
 
     .feature-title {
         color: #312e81;
         font-size: 16px;
-        font-weight: 750;
-        margin-bottom: 7px;
+        font-weight: bold;
+        margin-bottom: 8px;
     }
 
     .feature-text {
@@ -115,8 +110,40 @@ st.markdown(
         color: #1e1b4b;
         font-size: 24px;
         font-weight: 800;
-        margin-top: 28px;
+        margin-top: 25px;
         margin-bottom: 15px;
+    }
+
+    .info-panel {
+        background: #eef2ff;
+        border: 1px solid #c7d2fe;
+        border-radius: 14px;
+        padding: 18px;
+        color: #312e81;
+        line-height: 1.8;
+        margin: 12px 0;
+    }
+
+    .metric-card {
+        background: white;
+        border: 1px solid #e5e7eb;
+        border-radius: 15px;
+        padding: 20px;
+        margin: 10px 0;
+    }
+
+    .metric-label {
+        color: #64748b;
+        font-size: 12px;
+        font-weight: bold;
+        letter-spacing: 1px;
+    }
+
+    .metric-value {
+        color: #4f46e5;
+        font-size: 28px;
+        font-weight: 800;
+        margin-top: 8px;
     }
 
     .job-card {
@@ -124,32 +151,25 @@ st.markdown(
         border: 1px solid #e2e8f0;
         border-radius: 18px;
         padding: 24px;
-        margin: 12px 0;
-        box-shadow: 0 6px 20px rgba(31,41,55,0.05);
-    }
-
-    .job-top {
-        display: flex;
-        justify-content: space-between;
-        gap: 15px;
-        align-items: flex-start;
+        margin: 16px 0;
+        box-shadow: 0 5px 18px rgba(31,41,55,0.05);
     }
 
     .job-rank {
         display: inline-block;
         background: #ede9fe;
         color: #5b21b6;
-        border-radius: 9px;
         padding: 5px 10px;
+        border-radius: 8px;
         font-size: 12px;
-        font-weight: 800;
-        margin-bottom: 9px;
+        font-weight: bold;
+        margin-bottom: 8px;
     }
 
     .job-title {
+        color: #1e1b4b;
         font-size: 22px;
         font-weight: 800;
-        color: #1e1b4b;
         margin-bottom: 6px;
     }
 
@@ -162,9 +182,8 @@ st.markdown(
     .score-number {
         color: #4f46e5;
         font-size: 25px;
-        font-weight: 850;
+        font-weight: 800;
         text-align: right;
-        white-space: nowrap;
     }
 
     .score-label {
@@ -174,16 +193,16 @@ st.markdown(
     }
 
     .score-track {
+        background: #e9eaf5;
         height: 9px;
         border-radius: 20px;
-        background: #e9eaf5;
         overflow: hidden;
-        margin: 10px 0 18px;
+        margin: 12px 0 18px;
     }
 
     .score-fill {
-        height: 100%;
         background: linear-gradient(90deg, #6366f1, #8b5cf6);
+        height: 9px;
         border-radius: 20px;
     }
 
@@ -191,7 +210,7 @@ st.markdown(
         color: #475569;
         font-size: 14px;
         line-height: 1.7;
-        margin-bottom: 16px;
+        margin-bottom: 15px;
     }
 
     .pill-row {
@@ -204,8 +223,8 @@ st.markdown(
     .pill {
         background: #f1f5f9;
         color: #475569;
-        border-radius: 20px;
         padding: 7px 11px;
+        border-radius: 20px;
         font-size: 12px;
     }
 
@@ -226,7 +245,6 @@ st.markdown(
     .skill-box b {
         display: block;
         margin-bottom: 5px;
-        font-size: 12px;
     }
 
     .required {
@@ -244,48 +262,16 @@ st.markdown(
         color: #9a3412;
     }
 
-    .metric-card {
-        background: white;
-        border: 1px solid #e5e7eb;
-        padding: 20px;
-        border-radius: 16px;
-        box-shadow: 0 4px 15px rgba(31,41,55,0.04);
-    }
-
-    .metric-label {
-        color: #64748b;
-        font-size: 12px;
-        font-weight: 700;
-        text-transform: uppercase;
-        letter-spacing: 1px;
-    }
-
-    .metric-value {
-        color: #312e81;
-        font-size: 29px;
-        font-weight: 850;
-        margin-top: 8px;
-    }
-
-    .info-panel {
-        background: #eef2ff;
-        border: 1px solid #c7d2fe;
-        border-radius: 16px;
-        padding: 20px;
-        color: #312e81;
-        line-height: 1.8;
-    }
-
     .footer {
-        text-align: center;
         color: #64748b;
+        text-align: center;
         padding: 30px 0 10px;
         font-size: 12px;
     }
 
     @media (max-width: 700px) {
         .hero {
-            padding: 23px;
+            padding: 22px;
         }
 
         .hero-title {
@@ -295,10 +281,6 @@ st.markdown(
         .skill-grid {
             grid-template-columns: 1fr;
         }
-
-        .job-title {
-            font-size: 19px;
-        }
     }
     </style>
     """,
@@ -306,12 +288,13 @@ st.markdown(
 )
 
 
-# --------------------------------------------------
+# ==================================================
 # HELPER FUNCTIONS
-# --------------------------------------------------
+# ==================================================
 
 def safe_text(value, default="Not specified"):
-    """Convert a value to safe display text."""
+    """Escape values before displaying them in HTML."""
+
     if value is None:
         return default
 
@@ -330,7 +313,8 @@ def safe_text(value, default="Not specified"):
 
 
 def format_score(value):
-    """Format a recommendation score as a percentage."""
+    """Convert a score into a percentage between 0 and 100."""
+
     try:
         score = float(value)
     except (TypeError, ValueError):
@@ -340,7 +324,8 @@ def format_score(value):
 
 
 def display_skills(value):
-    """Display a skill list without exposing Python list syntax."""
+    """Format skills for display."""
+
     if value is None:
         return "None"
 
@@ -352,20 +337,18 @@ def display_skills(value):
 
     if isinstance(value, (list, tuple, set)):
         items = [str(item).strip() for item in value if str(item).strip()]
-        return html.escape(", ".join(items)) if items else "None"
+    else:
+        text = str(value).strip()
 
-    text = str(value).strip()
+        if text.lower() in {"", "none", "nan", "[]"}:
+            return "None"
 
-    if not text or text.lower() in {"none", "nan", "[]"}:
-        return "None"
-
-    # Support comma-separated or list-like skill output.
-    text = text.strip("[]")
-    items = [
-        item.strip().strip("'\"")
-        for item in text.replace(";", ",").split(",")
-        if item.strip().strip("'\"")
-    ]
+        text = text.strip("[]")
+        items = [
+            item.strip().strip("'\"")
+            for item in text.replace(";", ",").split(",")
+            if item.strip().strip("'\"")
+        ]
 
     if not items:
         return "None"
@@ -373,27 +356,34 @@ def display_skills(value):
     return html.escape(", ".join(items))
 
 
-def get_column_value(row, column, default="Not specified"):
-    """Read a DataFrame field safely."""
+def get_value(row, column, default="Not specified"):
+    """Read a field from a result row."""
+
     if column not in row.index:
         return default
+
     return row[column]
 
 
-# --------------------------------------------------
-# HEADER
-# --------------------------------------------------
+# ==================================================
+# HERO SECTION
+# ==================================================
 
 st.markdown(
     """
     <div class="hero">
         <div class="hero-label">AI-Powered Career Matching</div>
-        <div class="hero-title">Smart Job Recommendation System</div>
+
+        <div class="hero-title">
+            Smart Job Recommendation System
+        </div>
+
         <div class="hero-subtitle">
             Discover suitable job opportunities using your skills,
             preferred location, experience level, and intelligent
             content-based recommendations.
         </div>
+
         <div class="badge-row">
             <span class="badge">Content-Based Filtering</span>
             <span class="badge">TF-IDF Vectorization</span>
@@ -407,31 +397,31 @@ st.markdown(
 )
 
 
-# --------------------------------------------------
+# ==================================================
 # FEATURE CARDS
-# --------------------------------------------------
+# ==================================================
 
-feature_columns = st.columns(3)
+columns = st.columns(3)
 
 features = [
     (
         "🎯",
         "Personalized Matching",
-        "Find jobs based on candidate skills, preferred role, experience level, and location.",
+        "Find jobs based on your skills, preferred role, experience, and location.",
     ),
     (
         "📊",
         "Match Score",
-        "Compare your skills and profile with job requirements to estimate compatibility.",
+        "Estimate compatibility using overlapping skills and job information.",
     ),
     (
         "🧠",
         "Skill Gap Analysis",
-        "Identify matching and missing skills to plan your next learning steps.",
+        "Identify matching and missing skills to plan your learning journey.",
     ),
 ]
 
-for column, feature in zip(feature_columns, features):
+for column, feature in zip(columns, features):
     icon, title, description = feature
 
     with column:
@@ -447,23 +437,19 @@ for column, feature in zip(feature_columns, features):
         )
 
 
-# --------------------------------------------------
-# LOAD RECOMMENDER
-# --------------------------------------------------
+# ==================================================
+# LOAD DATA AND RECOMMENDER
+# ==================================================
 
 @st.cache_resource
 def load_recommender():
-    # Resolve the dataset relative to this app's folder.
     data_path = Path(__file__).resolve().parent / "jobs.csv"
 
     if not data_path.exists():
         raise FileNotFoundError(
-            f"Could not find jobs.csv at: {data_path}. "
-            "Make sure jobs.csv is committed inside Task_4_Recommendation_System."
+            "jobs.csv is missing. Place it in the same folder as app.py."
         )
 
-    # Support recommender implementations that accept a path
-    # and those that load their dataset using a default path.
     try:
         return JobRecommender(data_path=str(data_path))
     except TypeError:
@@ -472,24 +458,30 @@ def load_recommender():
 
 try:
     recommender = load_recommender()
-except Exception as exc:
-    st.error("The recommendation engine could not be loaded.")
-    st.exception(exc)
+except Exception as error:
+    st.error("Unable to load the recommendation engine.")
+    st.exception(error)
     st.stop()
 
 
-# --------------------------------------------------
+jobs_df = getattr(recommender, "jobs", pd.DataFrame())
+
+if not isinstance(jobs_df, pd.DataFrame):
+    jobs_df = pd.DataFrame()
+
+
+# ==================================================
 # CANDIDATE PREFERENCES
-# --------------------------------------------------
+# ==================================================
 
 st.markdown(
     '<div class="section-heading">Candidate Preferences</div>',
     unsafe_allow_html=True,
 )
 
-left, right = st.columns([1, 1])
+left_column, right_column = st.columns(2)
 
-with left:
+with left_column:
     mode = st.radio(
         "Recommendation Mode",
         ["Recommend by Skills", "Recommend by Job Role"],
@@ -502,40 +494,29 @@ with left:
         value=5,
     )
 
-with right:
-    jobs_df = getattr(recommender, "jobs", pd.DataFrame())
-
-    if not isinstance(jobs_df, pd.DataFrame):
-        jobs_df = pd.DataFrame()
-
-    if not jobs_df.empty and "location" in jobs_df.columns:
+with right_column:
+    if "location" in jobs_df.columns:
         locations = sorted(
             jobs_df["location"].dropna().astype(str).unique().tolist()
         )
     else:
         locations = []
 
-    location_options = ["All"] + locations
-
     location_filter = st.selectbox(
         "Preferred Location",
-        location_options,
-        index=0,
+        ["All"] + locations,
     )
 
-    if not jobs_df.empty and "experience_level" in jobs_df.columns:
+    if "experience_level" in jobs_df.columns:
         experiences = sorted(
             jobs_df["experience_level"].dropna().astype(str).unique().tolist()
         )
     else:
         experiences = []
 
-    experience_options = ["All"] + experiences
-
     experience_filter = st.selectbox(
         "Experience Level",
-        experience_options,
-        index=0,
+        ["All"] + experiences,
     )
 
 
@@ -545,17 +526,14 @@ selected_job = None
 if mode == "Recommend by Skills":
     user_skills = st.text_input(
         "Enter your skills",
-        placeholder="Example: Python, SQL, Flask, HTML, CSS, Java",
-        help="Separate skills using commas.",
-    )
-
-    st.caption(
-        "Tip: Enter the technologies you know, separated by commas, "
-        "to receive more relevant recommendations."
+        placeholder="Python, SQL, Flask, HTML, CSS, Java",
+        help="Enter your skills separated by commas.",
     )
 
 else:
-    if not jobs_df.empty and "job_title" in jobs_df.columns:
+    if "job_title" not in jobs_df.columns or jobs_df.empty:
+        st.warning("No job titles found. Check your jobs.csv file.")
+    else:
         job_titles = sorted(
             jobs_df["job_title"].dropna().astype(str).unique().tolist()
         )
@@ -566,81 +544,71 @@ else:
                 job_titles,
             )
 
-            if selected_job:
-                selected_rows = jobs_df[
-                    jobs_df["job_title"].astype(str) == selected_job
-                ]
+            matching_rows = jobs_df[
+                jobs_df["job_title"].astype(str) == selected_job
+            ]
 
-                if not selected_rows.empty:
-                    selected = selected_rows.iloc[0]
+            if not matching_rows.empty:
+                selected_row = matching_rows.iloc[0]
 
-                    st.markdown(
-                        f"""
-                        <div class="info-panel">
-                            <b>Selected Role:</b>
-                            {safe_text(selected_job)}<br>
-                            <b>Company:</b>
-                            {safe_text(get_column_value(selected, "company"))}<br>
-                            <b>Location:</b>
-                            {safe_text(get_column_value(selected, "location"))}<br>
-                            <b>Experience:</b>
-                            {safe_text(get_column_value(selected, "experience_level"))}<br>
-                            <b>Required Skills:</b>
-                            {display_skills(get_column_value(selected, "skills", ""))}<br>
-                            <b>Description:</b>
-                            {safe_text(get_column_value(selected, "description"))}
-                        </div>
-                        """,
-                        unsafe_allow_html=True,
-                    )
-    else:
-        st.warning(
-            "The dataset does not contain job titles. "
-            "Check that jobs.csv has a job_title column."
-        )
+                st.markdown(
+                    f"""
+                    <div class="info-panel">
+                        <b>Selected Role:</b> {safe_text(selected_job)}<br>
+                        <b>Company:</b> {safe_text(get_value(selected_row, "company"))}<br>
+                        <b>Location:</b> {safe_text(get_value(selected_row, "location"))}<br>
+                        <b>Experience:</b> {safe_text(get_value(selected_row, "experience_level"))}<br>
+                        <b>Required Skills:</b> {display_skills(get_value(selected_row, "skills", ""))}<br>
+                        <b>Description:</b> {safe_text(get_value(selected_row, "description"))}
+                    </div>
+                    """,
+                    unsafe_allow_html=True,
+                )
 
 
-# --------------------------------------------------
-# HOW THE ENGINE WORKS
-# --------------------------------------------------
+# ==================================================
+# EXPLANATION
+# ==================================================
 
 with st.expander("⚙️ How the engine works"):
     st.markdown(
         """
-        1. **Job data:** The engine reads job titles, skills,
-           experience levels, locations, and descriptions.
-        2. **TF-IDF vectorization:** Text is transformed into numerical
-           vectors based on term importance.
-        3. **Cosine similarity:** Textual similarity is used to compare
-           job descriptions and candidate/job-role information.
-        4. **Skill-gap analysis:** The system identifies overlapping
-           skills and skills that may need improvement.
-        5. **Filtering:** Location and experience preferences narrow
-           the list of recommendations.
+        **1. Job information:** The system uses job titles, required
+        skills, experience levels, locations, and descriptions.
+
+        **2. TF-IDF vectorization:** Text is converted into numerical
+        vectors based on the importance of terms.
+
+        **3. Cosine similarity:** The engine compares textual
+        representations to estimate similarity.
+
+        **4. Skill-gap analysis:** Matching and missing skills are
+        displayed for each recommendation.
+
+        **5. Filtering:** Location and experience preferences narrow
+        the results.
         """
     )
 
 
-# --------------------------------------------------
-# GENERATE RECOMMENDATIONS
-# --------------------------------------------------
+# ==================================================
+# RECOMMENDATION RESULTS
+# ==================================================
 
 st.markdown(
     '<div class="section-heading">Recommended Jobs</div>',
     unsafe_allow_html=True,
 )
 
-recommend_clicked = st.button(
+if st.button(
     "✨ Find Matching Jobs",
     type="primary",
     use_container_width=True,
-)
-
-if recommend_clicked:
+):
     try:
         if mode == "Recommend by Skills":
             if not user_skills.strip():
-                st.warning("Please enter at least one skill to continue.")
+                st.warning("Please enter your skills first.")
                 st.stop()
 
             results = recommender.recommend_by_skills(
@@ -662,30 +630,25 @@ if recommend_clicked:
                 experience_filter,
             )
 
-        if results is None or not isinstance(results, pd.DataFrame):
-            st.error(
-                "The recommender did not return a pandas DataFrame. "
-                "Check the return value in recommender.py."
-            )
+        if not isinstance(results, pd.DataFrame):
+            st.error("The recommender must return a pandas DataFrame.")
             st.stop()
 
         if results.empty:
             st.warning(
-                "No jobs matched these filters. Try choosing All for "
-                "location or experience, or select a different role."
+                "No matching jobs found. Try changing the location "
+                "or experience filters."
             )
             st.stop()
 
-        # Make sure scores are numeric before displaying metrics.
         if "match_score" not in results.columns:
             st.error(
-                "The recommendation results do not contain a "
-                "'match_score' column. Update recommender.py to "
-                "return match_score for each job."
+                "Missing match_score column. Please check recommender.py."
             )
             st.stop()
 
         results = results.copy()
+
         results["match_score"] = pd.to_numeric(
             results["match_score"],
             errors="coerce",
@@ -693,15 +656,15 @@ if recommend_clicked:
 
         scores = results["match_score"]
 
-        metric_columns = st.columns(3)
+        metrics = st.columns(3)
 
-        metrics = [
+        metric_data = [
             ("RESULTS", str(len(results))),
             ("AVG MATCH", f"{scores.mean():.2f}%"),
             ("BEST MATCH", f"{scores.max():.2f}%"),
         ]
 
-        for column, metric in zip(metric_columns, metrics):
+        for column, metric in zip(metrics, metric_data):
             label, value = metric
 
             with column:
@@ -715,56 +678,97 @@ if recommend_clicked:
                     unsafe_allow_html=True,
                 )
 
-        st.write("")
-
-        # Render each job as a complete HTML card.
-        for index, (_, row) in enumerate(results.iterrows(), start=1):
-            job_title = safe_text(get_column_value(row, "job_title"))
-            company = safe_text(get_column_value(row, "company"))
-            location = safe_text(get_column_value(row, "location"))
+        # Display each recommended job.
+        for index, (_, row) in enumerate(
+            results.iterrows(),
+            start=1,
+        ):
+            job_title = safe_text(get_value(row, "job_title"))
+            company = safe_text(get_value(row, "company"))
+            location = safe_text(get_value(row, "location"))
             experience = safe_text(
-                get_column_value(row, "experience_level")
+                get_value(row, "experience_level")
             )
             description = safe_text(
-                get_column_value(row, "description", "No description available.")
+                get_value(row, "description", "No description available.")
             )
 
             required_skills = display_skills(
-                get_column_value(row, "skills", "")
+                get_value(row, "skills", "")
             )
             matched_skills = display_skills(
-                get_column_value(row, "matched_skills", None)
+                get_value(row, "matched_skills", None)
             )
             missing_skills = display_skills(
-                get_column_value(row, "missing_skills", None)
+                get_value(row, "missing_skills", None)
             )
 
             score = format_score(row["match_score"])
 
+            card_html = f"""
+            <div class="job-card">
+                <div class="job-rank">#{index}</div>
+
+                <div class="job-title">{job_title}</div>
+                <div class="job-meta">{company} · {location}</div>
+
+                <div class="score-number">{score:.2f}%</div>
+                <div class="score-label">MATCH SCORE</div>
+
+                <div class="score-track">
+                    <div class="score-fill"
+                         style="width: {score:.2f}%;"></div>
+                </div>
+
+                <div class="job-desc">{description}</div>
+
+                <div class="pill-row">
+                    <span class="pill">📍 {location}</span>
+                    <span class="pill">⚡ {experience}</span>
+                    <span class="pill">🎯 Match {score:.2f}%</span>
+                </div>
+
+                <div class="skill-grid">
+                    <div class="skill-box required">
+                        <b>Required Skills</b>
+                        {required_skills}
+                    </div>
+
+                    <div class="skill-box matched">
+                        <b>Matched Skills</b>
+                        {matched_skills}
+                    </div>
+
+                    <div class="skill-box missing">
+                        <b>Missing Skills</b>
+                        {missing_skills}
+                    </div>
+                </div>
+            </div>
+            """
+
             st.markdown(
-                f"""
-                <div class="job-card">
-                    <div class="job-top">
-                        <div>
-                            <div class="job-rank">#{index}</div>
-                            <div class="job-title">{job_title}</div>
-                            <div class="job-meta">
-                                {company} · {location}
-                            </div>
-                        </div>
-                        <div>
-                            <div class="score-number">{score:.2f}%</div>
-                            <div class="score-label">MATCH SCORE</div>
-                        </div>
-                    </div>
+                card_html,
+                unsafe_allow_html=True,
+            )
 
-                    <div class="score-track">
-                        <div class="score-fill"
-                             style="width: {score:.2f}%;">
-                        </div>
-                    </div>
+        st.success("Job recommendations generated successfully!")
 
-                    <div class="job-desc">{description}</div>
+    except Exception as error:
+        st.error("An error occurred while generating recommendations.")
+        st.exception(error)
 
-                    <div class="pill-row">
-                        <span class="pill">📍 {location}</sp
+
+# ==================================================
+# FOOTER
+# ==================================================
+
+st.markdown(
+    """
+    <div class="footer">
+        Built using Python · Streamlit · Pandas · TF-IDF ·
+        Cosine Similarity · Skill Gap Analysis
+    </div>
+    """,
+    unsafe_allow_html=True,
+        )
