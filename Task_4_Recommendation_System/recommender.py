@@ -1,4 +1,5 @@
 from pathlib import Path
+import re
 
 import pandas as pd
 from sklearn.feature_extraction.text import TfidfVectorizer
@@ -9,48 +10,25 @@ class JobRecommender:
 
     def __init__(self, data_path=None):
 
-        # Locate the directory containing this Python file
+        # Locate jobs.csv relative to this Python file
         current_dir = Path(__file__).resolve().parent
 
-        # Check possible locations for jobs.csv
-        possible_paths = []
-
         if data_path is not None:
-            possible_paths.append(Path(data_path))
+            csv_path = Path(data_path)
+            if not csv_path.is_absolute():
+                csv_path = current_dir / csv_path
+        else:
+            csv_path = current_dir / "jobs.csv"
 
-        possible_paths.extend([
-            current_dir / "jobs.csv",
-            current_dir / "data" / "jobs.csv",
-            current_dir.parent / "jobs.csv",
-            current_dir.parent.parent / "jobs.csv",
-        ])
-
-        # Select the first existing dataset
-        csv_path = None
-
-        for path in possible_paths:
-            if path.is_file():
-                csv_path = path
-                break
-
-        # Give a clear error if the dataset is missing
-        if csv_path is None:
-            checked_paths = "\n".join(
-                str(path.resolve()) for path in possible_paths
-            )
-
+        if not csv_path.is_file():
             raise FileNotFoundError(
-                "Could not find jobs.csv.\n\n"
-                "Please create or upload jobs.csv inside:\n"
-                f"{current_dir}\n\n"
-                "Locations checked:\n"
-                f"{checked_paths}"
+                f"Dataset not found: {csv_path}. "
+                "Upload jobs.csv into Task_4_Recommendation_System."
             )
 
-        # Load the dataset
+        # Load dataset
         self.jobs = pd.read_csv(csv_path)
 
-        # Validate the required columns
         required_columns = [
             "job_id",
             "job_title",
@@ -62,28 +40,24 @@ class JobRecommender:
         ]
 
         missing_columns = [
-            column
-            for column in required_columns
-            if column not in self.jobs.columns
+            col for col in required_columns
+            if col not in self.jobs.columns
         ]
 
         if missing_columns:
             raise ValueError(
-                "jobs.csv is missing these required columns: "
+                "Missing CSV columns: "
                 + ", ".join(missing_columns)
             )
 
         if self.jobs.empty:
-            raise ValueError(
-                "jobs.csv contains no job records."
-            )
+            raise ValueError("jobs.csv contains no job records.")
 
-        # Remove rows without job titles
         self.jobs = self.jobs.dropna(
             subset=["job_title"]
         ).reset_index(drop=True)
 
-        # Replace missing text values
+        # Clean text columns
         text_columns = [
             "job_title",
             "company",
@@ -93,14 +67,12 @@ class JobRecommender:
             "description",
         ]
 
-        for column in text_columns:
-            self.jobs[column] = (
-                self.jobs[column]
-                .fillna("")
-                .astype(str)
+        for col in text_columns:
+            self.jobs[col] = (
+                self.jobs[col].fillna("").astype(str)
             )
 
-        # Combine relevant fields for recommendation
+        # Combine features for content-based recommendations
         self.jobs["combined_features"] = (
             self.jobs["job_title"] + " "
             + self.jobs["skills"] + " "
@@ -109,146 +81,244 @@ class JobRecommender:
             + self.jobs["description"]
         )
 
-        # Convert job information into TF-IDF vectors
         self.vectorizer = TfidfVectorizer(
             stop_words="english"
         )
 
-        self.feature_matrix = (
-            self.vectorizer.fit_transform(
-                self.jobs["combined_features"]
-            )
+        self.feature_matrix = self.vectorizer.fit_transform(
+            self.jobs["combined_features"]
         )
 
-    # Return all available job titles
+    # Extract individual skills
+    @staticmethod
+    def _skill_set(text):
+        return {
+            token.lower()
+            for token in re.findall(
+                r"[a-zA-Z][a-zA-Z0-9+#.-]*",
+                str(text)
+            )
+        }
+
+    # Get available job titles
     def get_job_titles(self):
         return sorted(
             self.jobs["job_title"].unique().tolist()
         )
 
-    # Return all available locations
+    # Get available locations
     def get_locations(self):
         return sorted(
             self.jobs["location"].unique().tolist()
         )
 
-    # Return all available experience levels
+    # Get available experience levels
     def get_experience_levels(self):
         return sorted(
             self.jobs["experience_level"].unique().tolist()
         )
 
-    # Return details for a selected job
+    # Get details for a selected job
     def get_job_details(self, job_title):
-
-        matching_jobs = self.jobs[
+        matching = self.jobs[
             self.jobs["job_title"] == job_title
         ]
 
-        if matching_jobs.empty:
+        if matching.empty:
             return None
 
-        return matching_jobs.iloc[0].to_dict()
+        return matching.iloc[0].to_dict()
 
-    # Identify skills that may be missing
-    def analyze_skill_gap(
-        self,
-        user_skills,
-        job_title
-    ):
-
+    # Find missing skills for a selected role
+    def analyze_skill_gap(self, user_skills, job_title):
         job = self.get_job_details(job_title)
 
         if job is None:
             return []
 
-        required_skills = {
-            skill.strip().lower()
-            for skill in job["skills"].split()
-            if skill.strip()
-        }
+        required = self._skill_set(job["skills"])
+        provided = self._skill_set(user_skills)
 
-        provided_skills = {
-            skill.strip().lower()
-            for skill in user_skills.split(",")
-            if skill.strip()
-        }
+        return sorted(required - provided)
 
-        return sorted(
-            required_skills - provided_skills
-        )
-
-    # Recommend jobs based on a selected job title
-    def recommend_by_job_title(
+    # Apply location and experience filters
+    def _filter_jobs(
         self,
-        job_title,
-        top_n=5
+        results,
+        location_filter="All",
+        experience_filter="All"
     ):
 
-        matching_indices = self.jobs.index[
-            self.jobs["job_title"] == job_title
-        ].tolist()
+        if results.empty:
+            return results
 
-        if not matching_indices:
-            return pd.DataFrame()
+        if location_filter and location_filter != "All":
+            results = results[
+                results["location"].str.casefold()
+                == str(location_filter).casefold()
+            ]
 
-        job_index = matching_indices[0]
+        if experience_filter and experience_filter != "All":
+            results = results[
+                results["experience_level"].str.casefold()
+                == str(experience_filter).casefold()
+            ]
 
-        similarity_scores = cosine_similarity(
-            self.feature_matrix[job_index],
-            self.feature_matrix
-        ).flatten()
+        return results.copy()
 
-        ranked_indices = similarity_scores.argsort()[::-1]
+    # Add match percentage and skill-gap details
+    def _add_match_details(self, results, user_skills):
 
-        # Exclude the selected job itself
-        ranked_indices = [
-            index
-            for index in ranked_indices
-            if index != job_index
-        ]
+        if results.empty:
+            return results
 
-        results = self.jobs.iloc[
-            ranked_indices[:top_n]
-        ].copy()
+        user_skill_set = self._skill_set(user_skills)
 
-        results["similarity_score"] = [
-            float(similarity_scores[index])
-            for index in ranked_indices[:top_n]
-        ]
+        match_scores = []
+        matched_skills_list = []
+        missing_skills_list = []
 
-        return results
+        for _, job in results.iterrows():
 
-    # Recommend jobs based on the user's skills
+            required_skills = self._skill_set(job["skills"])
+
+            matched = sorted(
+                user_skill_set & required_skills
+            )
+
+            missing = sorted(
+                required_skills - user_skill_set
+            )
+
+            if required_skills:
+                skill_score = (
+                    len(matched) / len(required_skills)
+                ) * 100
+            else:
+                skill_score = 0.0
+
+            # Combine content similarity and skill overlap
+            similarity = float(
+                job.get("similarity_score", 0.0)
+            ) * 100
+
+            score = (
+                0.6 * skill_score
+                + 0.4 * similarity
+            )
+
+            match_scores.append(round(score, 2))
+            matched_skills_list.append(
+                ", ".join(matched) if matched else "None"
+            )
+            missing_skills_list.append(
+                ", ".join(missing) if missing else "None"
+            )
+
+        results["match_score"] = match_scores
+        results["matched_skills"] = matched_skills_list
+        results["missing_skills"] = missing_skills_list
+
+        return results.sort_values(
+            "match_score",
+            ascending=False
+        ).reset_index(drop=True)
+
+    # Recommend jobs using the candidate's skills
     def recommend_by_skills(
         self,
         user_skills,
-        top_n=5
+        top_n=5,
+        location_filter="All",
+        experience_filter="All"
     ):
 
         if not user_skills or not user_skills.strip():
             return pd.DataFrame()
 
+        # Compare candidate skills against every job
         user_vector = self.vectorizer.transform(
             [user_skills]
         )
 
-        similarity_scores = cosine_similarity(
+        scores = cosine_similarity(
             user_vector,
             self.feature_matrix
         ).flatten()
 
-        ranked_indices = similarity_scores.argsort()[::-1][
-            :top_n
+        results = self.jobs.copy()
+
+        results["similarity_score"] = scores
+
+        # Apply selected filters
+        results = self._filter_jobs(
+            results,
+            location_filter,
+            experience_filter
+        )
+
+        if results.empty:
+            return results
+
+        # Calculate match score and skill gaps
+        results = self._add_match_details(
+            results,
+            user_skills
+        )
+
+        return results.head(int(top_n)).reset_index(drop=True)
+
+    # Recommend jobs similar to the selected role
+    def recommend_by_job_title(
+        self,
+        job_title,
+        top_n=5,
+        location_filter="All",
+        experience_filter="All"
+    ):
+
+        matching = self.jobs.index[
+            self.jobs["job_title"] == job_title
+        ].tolist()
+
+        if not matching:
+            return pd.DataFrame()
+
+        selected_index = matching[0]
+
+        # Compare the selected job with other jobs
+        scores = cosine_similarity(
+            self.feature_matrix[selected_index],
+            self.feature_matrix
+        ).flatten()
+
+        results = self.jobs.copy()
+
+        results["similarity_score"] = scores
+
+        # Exclude the selected job itself
+        results = results[
+            results.index != selected_index
         ]
 
-        results = self.jobs.iloc[
-            ranked_indices
-        ].copy()
+        # Apply selected filters
+        results = self._filter_jobs(
+            results,
+            location_filter,
+            experience_filter
+        )
 
-        results["similarity_score"] = [
-            float(similarity_scores[index])
-            for index in ranked_indices
-        ]
+        if results.empty:
+            return results
 
-        return results
+        # Use the selected role's skills for gap analysis
+        selected_skills = self.jobs.iloc[
+            selected_index
+        ]["skills"]
+
+        results = self._add_match_details(
+            results,
+            selected_skills
+        )
+
+        return results.head(int(top_n)).reset_index(drop=True)
