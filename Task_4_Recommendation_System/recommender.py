@@ -3,10 +3,13 @@ from sklearn.feature_extraction.text import TfidfVectorizer
 from sklearn.metrics.pairwise import cosine_similarity
 
 
+from pathlib import Path
 class JobRecommender:
-    def __init__(self, data_path="jobs.csv"):
-        self.jobs = pd.read_csv(data_path)
+    def __init__(self, data_path=None):
+        if data_path is None:
+            data_path = Path(__file__).resolve().parent / "jobs.csv"
 
+        self.jobs = pd.read_csv(data_path)
         self.jobs["combined_features"] = (
             self.jobs["job_title"].astype(str) + " " +
             self.jobs["skills"].astype(str) + " " +
