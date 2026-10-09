@@ -1,4 +1,5 @@
 from pathlib import Path
+from textwrap import dedent
 import html
 
 import pandas as pd
@@ -7,9 +8,9 @@ import streamlit as st
 from recommender import JobRecommender
 
 
-# ==================================================
+# =========================================================
 # PAGE CONFIGURATION
-# ==================================================
+# =========================================================
 
 st.set_page_config(
     page_title="Smart Job Recommendation System",
@@ -18,11 +19,98 @@ st.set_page_config(
 )
 
 
-# ==================================================
-# CUSTOM STYLING
-# ==================================================
+# =========================================================
+# HTML AND DISPLAY HELPERS
+# =========================================================
 
-st.markdown(
+def render_html(content):
+    """Render HTML without accidentally creating a Markdown code block."""
+    st.markdown(
+        dedent(content).strip(),
+        unsafe_allow_html=True,
+    )
+
+
+def safe_text(value, default="Not specified"):
+    """Escape dynamic text before inserting it into HTML."""
+    if value is None:
+        return default
+
+    try:
+        if pd.isna(value):
+            return default
+    except (TypeError, ValueError):
+        pass
+
+    value = str(value).strip()
+
+    if not value:
+        return default
+
+    return html.escape(value)
+
+
+def get_value(row, column, default="Not specified"):
+    if column not in row.index:
+        return default
+    return row[column]
+
+
+def display_skills(value):
+    """Format skill lists and comma-separated skills for display."""
+    if value is None:
+        return "None"
+
+    try:
+        if pd.isna(value):
+            return "None"
+    except (TypeError, ValueError):
+        pass
+
+    if isinstance(value, (list, tuple, set)):
+        items = [
+            str(item).strip()
+            for item in value
+            if str(item).strip()
+        ]
+    else:
+        text = str(value).strip()
+
+        if text.lower() in {"", "none", "nan", "[]"}:
+            return "None"
+
+        text = text.strip("[]")
+
+        items = [
+            item.strip().strip("'\"")
+            for item in text.replace(";", ",").split(",")
+            if item.strip().strip("'\"")
+        ]
+
+    if not items:
+        return "None"
+
+    return html.escape(", ".join(items))
+
+
+def format_score(value):
+    """Format a valid match score."""
+    try:
+        score = float(value)
+    except (TypeError, ValueError):
+        return None
+
+    if not pd.notna(score):
+        return None
+
+    return max(0.0, min(100.0, score))
+
+
+# =========================================================
+# STYLING
+# =========================================================
+
+render_html(
     """
     <style>
     .stApp {
@@ -41,6 +129,7 @@ st.markdown(
         padding: 35px;
         border-radius: 22px;
         margin-bottom: 25px;
+        box-shadow: 0 12px 30px rgba(79,70,229,.16);
     }
 
     .hero-label {
@@ -55,6 +144,7 @@ st.markdown(
     .hero-title {
         font-size: 35px;
         font-weight: 800;
+        line-height: 1.25;
         margin-bottom: 12px;
     }
 
@@ -72,11 +162,12 @@ st.markdown(
     }
 
     .badge {
-        background: rgba(255,255,255,0.15);
-        border: 1px solid rgba(255,255,255,0.3);
+        background: rgba(255,255,255,.15);
+        border: 1px solid rgba(255,255,255,.3);
         padding: 8px 12px;
         border-radius: 20px;
         font-size: 12px;
+        color: white;
     }
 
     .feature-card {
@@ -84,8 +175,9 @@ st.markdown(
         border: 1px solid #e5e7eb;
         border-radius: 16px;
         padding: 20px;
-        min-height: 145px;
+        min-height: 150px;
         margin-bottom: 15px;
+        box-shadow: 0 5px 18px rgba(31,41,55,.04);
     }
 
     .feature-icon {
@@ -103,14 +195,14 @@ st.markdown(
     .feature-text {
         color: #64748b;
         font-size: 13px;
-        line-height: 1.6;
+        line-height: 1.7;
     }
 
     .section-heading {
         color: #1e1b4b;
         font-size: 24px;
         font-weight: 800;
-        margin-top: 25px;
+        margin-top: 28px;
         margin-bottom: 15px;
     }
 
@@ -120,7 +212,7 @@ st.markdown(
         border-radius: 14px;
         padding: 18px;
         color: #312e81;
-        line-height: 1.8;
+        line-height: 1.9;
         margin: 12px 0;
     }
 
@@ -130,6 +222,7 @@ st.markdown(
         border-radius: 15px;
         padding: 20px;
         margin: 10px 0;
+        box-shadow: 0 4px 15px rgba(31,41,55,.04);
     }
 
     .metric-label {
@@ -152,7 +245,7 @@ st.markdown(
         border-radius: 18px;
         padding: 24px;
         margin: 16px 0;
-        box-shadow: 0 5px 18px rgba(31,41,55,0.05);
+        box-shadow: 0 5px 18px rgba(31,41,55,.05);
     }
 
     .job-rank {
@@ -164,6 +257,13 @@ st.markdown(
         font-size: 12px;
         font-weight: bold;
         margin-bottom: 8px;
+    }
+
+    .job-top {
+        display: flex;
+        justify-content: space-between;
+        align-items: flex-start;
+        gap: 15px;
     }
 
     .job-title {
@@ -184,6 +284,7 @@ st.markdown(
         font-size: 25px;
         font-weight: 800;
         text-align: right;
+        white-space: nowrap;
     }
 
     .score-label {
@@ -283,93 +384,15 @@ st.markdown(
         }
     }
     </style>
-    """,
-    unsafe_allow_html=True,
+    """
 )
 
 
-# ==================================================
-# HELPER FUNCTIONS
-# ==================================================
+# =========================================================
+# HERO
+# =========================================================
 
-def safe_text(value, default="Not specified"):
-    """Escape values before displaying them in HTML."""
-
-    if value is None:
-        return default
-
-    try:
-        if pd.isna(value):
-            return default
-    except (TypeError, ValueError):
-        pass
-
-    value = str(value).strip()
-
-    if not value:
-        return default
-
-    return html.escape(value)
-
-
-def format_score(value):
-    """Convert a score into a percentage between 0 and 100."""
-
-    try:
-        score = float(value)
-    except (TypeError, ValueError):
-        score = 0.0
-
-    return max(0.0, min(100.0, score))
-
-
-def display_skills(value):
-    """Format skills for display."""
-
-    if value is None:
-        return "None"
-
-    try:
-        if pd.isna(value):
-            return "None"
-    except (TypeError, ValueError):
-        pass
-
-    if isinstance(value, (list, tuple, set)):
-        items = [str(item).strip() for item in value if str(item).strip()]
-    else:
-        text = str(value).strip()
-
-        if text.lower() in {"", "none", "nan", "[]"}:
-            return "None"
-
-        text = text.strip("[]")
-        items = [
-            item.strip().strip("'\"")
-            for item in text.replace(";", ",").split(",")
-            if item.strip().strip("'\"")
-        ]
-
-    if not items:
-        return "None"
-
-    return html.escape(", ".join(items))
-
-
-def get_value(row, column, default="Not specified"):
-    """Read a field from a result row."""
-
-    if column not in row.index:
-        return default
-
-    return row[column]
-
-
-# ==================================================
-# HERO SECTION
-# ==================================================
-
-st.markdown(
+render_html(
     """
     <div class="hero">
         <div class="hero-label">AI-Powered Career Matching</div>
@@ -392,16 +415,15 @@ st.markdown(
             <span class="badge">Match Scoring</span>
         </div>
     </div>
-    """,
-    unsafe_allow_html=True,
+    """
 )
 
 
-# ==================================================
+# =========================================================
 # FEATURE CARDS
-# ==================================================
+# =========================================================
 
-columns = st.columns(3)
+feature_columns = st.columns(3)
 
 features = [
     (
@@ -412,7 +434,7 @@ features = [
     (
         "📊",
         "Match Score",
-        "Estimate compatibility using overlapping skills and job information.",
+        "Compare your skills and profile with job requirements to estimate compatibility.",
     ),
     (
         "🧠",
@@ -421,37 +443,37 @@ features = [
     ),
 ]
 
-for column, feature in zip(columns, features):
+for column, feature in zip(feature_columns, features):
     icon, title, description = feature
 
     with column:
-        st.markdown(
+        render_html(
             f"""
             <div class="feature-card">
                 <div class="feature-icon">{icon}</div>
                 <div class="feature-title">{title}</div>
                 <div class="feature-text">{description}</div>
             </div>
-            """,
-            unsafe_allow_html=True,
+            """
         )
 
 
-# ==================================================
-# LOAD DATA AND RECOMMENDER
-# ==================================================
+# =========================================================
+# LOAD RECOMMENDER
+# =========================================================
 
 @st.cache_resource
 def load_recommender():
-    data_path = Path(__file__).resolve().parent / "jobs.csv"
+    dataset_path = Path(__file__).resolve().parent / "jobs.csv"
 
-    if not data_path.exists():
+    if not dataset_path.exists():
         raise FileNotFoundError(
-            "jobs.csv is missing. Place it in the same folder as app.py."
+            f"Dataset not found: {dataset_path}. "
+            "Ensure jobs.csv is in the same folder as app.py."
         )
 
     try:
-        return JobRecommender(data_path=str(data_path))
+        return JobRecommender(data_path=str(dataset_path))
     except TypeError:
         return JobRecommender()
 
@@ -470,18 +492,17 @@ if not isinstance(jobs_df, pd.DataFrame):
     jobs_df = pd.DataFrame()
 
 
-# ==================================================
+# =========================================================
 # CANDIDATE PREFERENCES
-# ==================================================
+# =========================================================
 
-st.markdown(
-    '<div class="section-heading">Candidate Preferences</div>',
-    unsafe_allow_html=True,
+render_html(
+    '<div class="section-heading">Candidate Preferences</div>'
 )
 
-left_column, right_column = st.columns(2)
+left, right = st.columns(2)
 
-with left_column:
+with left:
     mode = st.radio(
         "Recommendation Mode",
         ["Recommend by Skills", "Recommend by Job Role"],
@@ -494,7 +515,7 @@ with left_column:
         value=5,
     )
 
-with right_column:
+with right:
     if "location" in jobs_df.columns:
         locations = sorted(
             jobs_df["location"].dropna().astype(str).unique().tolist()
@@ -508,15 +529,19 @@ with right_column:
     )
 
     if "experience_level" in jobs_df.columns:
-        experiences = sorted(
-            jobs_df["experience_level"].dropna().astype(str).unique().tolist()
+        experience_levels = sorted(
+            jobs_df["experience_level"]
+            .dropna()
+            .astype(str)
+            .unique()
+            .tolist()
         )
     else:
-        experiences = []
+        experience_levels = []
 
     experience_filter = st.selectbox(
         "Experience Level",
-        ["All"] + experiences,
+        ["All"] + experience_levels,
     )
 
 
@@ -531,8 +556,8 @@ if mode == "Recommend by Skills":
     )
 
 else:
-    if "job_title" not in jobs_df.columns or jobs_df.empty:
-        st.warning("No job titles found. Check your jobs.csv file.")
+    if jobs_df.empty or "job_title" not in jobs_df.columns:
+        st.warning("No job titles found in jobs.csv.")
     else:
         job_titles = sorted(
             jobs_df["job_title"].dropna().astype(str).unique().tolist()
@@ -544,14 +569,14 @@ else:
                 job_titles,
             )
 
-            matching_rows = jobs_df[
+            selected_rows = jobs_df[
                 jobs_df["job_title"].astype(str) == selected_job
             ]
 
-            if not matching_rows.empty:
-                selected_row = matching_rows.iloc[0]
+            if not selected_rows.empty:
+                selected_row = selected_rows.iloc[0]
 
-                st.markdown(
+                render_html(
                     f"""
                     <div class="info-panel">
                         <b>Selected Role:</b> {safe_text(selected_job)}<br>
@@ -561,29 +586,28 @@ else:
                         <b>Required Skills:</b> {display_skills(get_value(selected_row, "skills", ""))}<br>
                         <b>Description:</b> {safe_text(get_value(selected_row, "description"))}
                     </div>
-                    """,
-                    unsafe_allow_html=True,
+                    """
                 )
 
 
-# ==================================================
-# EXPLANATION
-# ==================================================
+# =========================================================
+# HOW IT WORKS
+# =========================================================
 
 with st.expander("⚙️ How the engine works"):
     st.markdown(
         """
-        **1. Job information:** The system uses job titles, required
-        skills, experience levels, locations, and descriptions.
+        **1. Job information:** The system uses job titles, skills,
+        experience levels, locations, and descriptions.
 
         **2. TF-IDF vectorization:** Text is converted into numerical
-        vectors based on the importance of terms.
+        vectors based on term importance.
 
-        **3. Cosine similarity:** The engine compares textual
-        representations to estimate similarity.
+        **3. Cosine similarity:** Textual features are compared to
+        estimate how similar the candidate profile is to each job.
 
         **4. Skill-gap analysis:** Matching and missing skills are
-        displayed for each recommendation.
+        shown for each recommended job.
 
         **5. Filtering:** Location and experience preferences narrow
         the results.
@@ -591,13 +615,12 @@ with st.expander("⚙️ How the engine works"):
     )
 
 
-# ==================================================
-# RECOMMENDATION RESULTS
-# ==================================================
+# =========================================================
+# RECOMMENDATIONS
+# =========================================================
 
-st.markdown(
-    '<div class="section-heading">Recommended Jobs</div>',
-    unsafe_allow_html=True,
+render_html(
+    '<div class="section-heading">Recommended Jobs</div>'
 )
 
 if st.button(
@@ -631,58 +654,80 @@ if st.button(
             )
 
         if not isinstance(results, pd.DataFrame):
-            st.error("The recommender must return a pandas DataFrame.")
+            st.error(
+                "The recommender must return a pandas DataFrame."
+            )
             st.stop()
 
         if results.empty:
             st.warning(
-                "No matching jobs found. Try changing the location "
-                "or experience filters."
+                "No matching jobs found. Try changing your filters."
             )
             st.stop()
 
         if "match_score" not in results.columns:
             st.error(
-                "Missing match_score column. Please check recommender.py."
+                "The results do not contain match_score. "
+                "Please check recommender.py."
             )
             st.stop()
 
         results = results.copy()
 
+        # Preserve invalid scores as missing so the underlying issue
+        # is visible instead of silently presenting them as valid zeros.
         results["match_score"] = pd.to_numeric(
             results["match_score"],
             errors="coerce",
-        ).fillna(0).clip(0, 100)
+        )
+
+        if results["match_score"].isna().all():
+            st.error(
+                "All match scores are missing or non-numeric. "
+                "The scoring logic in recommender.py needs fixing."
+            )
+            st.stop()
+
+        results = results.dropna(subset=["match_score"])
+        results["match_score"] = results["match_score"].clip(0, 100)
+
+        if results.empty:
+            st.warning("No jobs with valid scores were returned.")
+            st.stop()
 
         scores = results["match_score"]
 
-        metrics = st.columns(3)
+        metric_columns = st.columns(3)
 
-        metric_data = [
+        metrics = [
             ("RESULTS", str(len(results))),
             ("AVG MATCH", f"{scores.mean():.2f}%"),
             ("BEST MATCH", f"{scores.max():.2f}%"),
         ]
 
-        for column, metric in zip(metrics, metric_data):
+        for column, metric in zip(metric_columns, metrics):
             label, value = metric
 
             with column:
-                st.markdown(
+                render_html(
                     f"""
                     <div class="metric-card">
                         <div class="metric-label">{label}</div>
                         <div class="metric-value">{value}</div>
                     </div>
-                    """,
-                    unsafe_allow_html=True,
+                    """
                 )
 
-        # Display each recommended job.
+        # Render the job cards.
         for index, (_, row) in enumerate(
             results.iterrows(),
             start=1,
         ):
+            score = format_score(row["match_score"])
+
+            if score is None:
+                continue
+
             job_title = safe_text(get_value(row, "job_title"))
             company = safe_text(get_value(row, "company"))
             location = safe_text(get_value(row, "location"))
@@ -703,72 +748,46 @@ if st.button(
                 get_value(row, "missing_skills", None)
             )
 
-            score = format_score(row["match_score"])
-
-            card_html = f"""
-            <div class="job-card">
-                <div class="job-rank">#{index}</div>
-
-                <div class="job-title">{job_title}</div>
-                <div class="job-meta">{company} · {location}</div>
-
-                <div class="score-number">{score:.2f}%</div>
-                <div class="score-label">MATCH SCORE</div>
-
-                <div class="score-track">
-                    <div class="score-fill"
-                         style="width: {score:.2f}%;"></div>
-                </div>
-
-                <div class="job-desc">{description}</div>
-
-                <div class="pill-row">
-                    <span class="pill">📍 {location}</span>
-                    <span class="pill">⚡ {experience}</span>
-                    <span class="pill">🎯 Match {score:.2f}%</span>
-                </div>
-
-                <div class="skill-grid">
-                    <div class="skill-box required">
-                        <b>Required Skills</b>
-                        {required_skills}
+            render_html(
+                f"""
+                <div class="job-card">
+                    <div class="job-top">
+                        <div>
+                            <div class="job-rank">#{index}</div>
+                            <div class="job-title">{job_title}</div>
+                            <div class="job-meta">{company} · {location}</div>
+                        </div>
+                        <div>
+                            <div class="score-number">{score:.2f}%</div>
+                            <div class="score-label">MATCH SCORE</div>
+                        </div>
                     </div>
 
-                    <div class="skill-box matched">
-                        <b>Matched Skills</b>
-                        {matched_skills}
+                    <div class="score-track">
+                        <div class="score-fill"
+                             style="width: {score:.2f}%;"></div>
                     </div>
 
-                    <div class="skill-box missing">
-                        <b>Missing Skills</b>
-                        {missing_skills}
+                    <div class="job-desc">{description}</div>
+
+                    <div class="pill-row">
+                        <span class="pill">📍 {location}</span>
+                        <span class="pill">⚡ {experience}</span>
+                        <span class="pill">🎯 Match {score:.2f}%</span>
                     </div>
-                </div>
-            </div>
-            """
 
-            st.markdown(
-                card_html,
-                unsafe_allow_html=True,
-            )
+                    <div class="skill-grid">
+                        <div class="skill-box required">
+                            <b>Required Skills</b>
+                            {required_skills}
+                        </div>
 
-        st.success("Job recommendations generated successfully!")
+                        <div class="skill-box matched">
+                            <b>Matched Skills</b>
+                            {matched_skills}
+                        </div>
 
-    except Exception as error:
-        st.error("An error occurred while generating recommendations.")
-        st.exception(error)
-
-
-# ==================================================
-# FOOTER
-# ==================================================
-
-st.markdown(
-    """
-    <div class="footer">
-        Built using Python · Streamlit · Pandas · TF-IDF ·
-        Cosine Similarity · Skill Gap Analysis
-    </div>
-    """,
-    unsafe_allow_html=True,
-        )
+                        <div class="skill-box missing">
+                            <b>Missing Skills</b>
+                            {missing_skills}
+                        </div>
