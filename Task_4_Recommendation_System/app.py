@@ -1,26 +1,64 @@
+import html
+from textwrap import dedent
+
 import streamlit as st
 from recommender import JobRecommender
-from textwrap import dedent
+
+
+# =========================================================
+# PAGE CONFIGURATION
+# =========================================================
 
 st.set_page_config(
     page_title="Smart Job Recommendation System",
     page_icon="💼",
-    layout="wide"
+    layout="wide",
 )
 
-def show_html(code):
-    st.markdown(dedent(code).strip(), unsafe_allow_html=True)
 
-# ---------------- CSS ----------------
+def show_html(code):
+    """Render trusted HTML/CSS inside Streamlit."""
+    st.markdown(
+        dedent(code).strip(),
+        unsafe_allow_html=True,
+    )
+
+
+def safe_text(value, default="N/A"):
+    """Escape text before inserting it into HTML."""
+    if value is None:
+        return default
+
+    try:
+        if value != value:  # Handles NaN
+            return default
+    except (TypeError, ValueError):
+        pass
+
+    return html.escape(str(value))
+
+
+def format_score(value):
+    """Format recommendation score safely."""
+    try:
+        score = float(value)
+        return round(max(0.0, min(100.0, score)), 2)
+    except (TypeError, ValueError):
+        return 0.0
+
+
+# =========================================================
+# CSS
+# =========================================================
 
 show_html("""
 <style>
 .stApp {
     background:
-        radial-gradient(circle at 8% 10%, rgba(37, 99, 235, 0.35), transparent 28%),
-        radial-gradient(circle at 90% 8%, rgba(236, 72, 153, 0.32), transparent 28%),
-        radial-gradient(circle at 50% 95%, rgba(16, 185, 129, 0.25), transparent 32%),
-        linear-gradient(135deg, #dbeafe 0%, #ede9fe 45%, #fce7f3 100%);
+        radial-gradient(circle at 8% 10%, rgba(37,99,235,.28), transparent 28%),
+        radial-gradient(circle at 90% 8%, rgba(236,72,153,.25), transparent 28%),
+        radial-gradient(circle at 50% 95%, rgba(16,185,129,.18), transparent 32%),
+        linear-gradient(135deg,#dbeafe 0%,#ede9fe 45%,#fce7f3 100%);
 }
 
 [data-testid="stHeader"] {
@@ -41,32 +79,19 @@ show_html("""
 
 .hero {
     background:
-        radial-gradient(circle at 90% 10%, rgba(255,255,255,0.22), transparent 24%),
-        linear-gradient(135deg, #2563eb 0%, #7c3aed 52%, #ec4899 100%);
-    border-radius: 36px;
-    padding: 42px;
+        radial-gradient(circle at 90% 10%,rgba(255,255,255,.22),transparent 24%),
+        linear-gradient(135deg,#2563eb 0%,#7c3aed 52%,#ec4899 100%);
+    border-radius: 30px;
+    padding: 38px;
     color: white;
-    box-shadow: 0 34px 90px rgba(124, 58, 237, 0.38);
+    box-shadow: 0 25px 65px rgba(124,58,237,.30);
     margin-bottom: 26px;
-    position: relative;
-    overflow: hidden;
-}
-
-.hero::after {
-    content: "";
-    position: absolute;
-    width: 250px;
-    height: 250px;
-    right: -70px;
-    bottom: -90px;
-    background: rgba(255,255,255,0.16);
-    border-radius: 50%;
 }
 
 .hero-kicker {
     display: inline-block;
-    background: rgba(255,255,255,0.18);
-    border: 1px solid rgba(255,255,255,0.30);
+    background: rgba(255,255,255,.18);
+    border: 1px solid rgba(255,255,255,.3);
     padding: 8px 14px;
     border-radius: 999px;
     font-size: 13px;
@@ -75,17 +100,16 @@ show_html("""
 }
 
 .hero-title {
-    font-size: 54px;
+    font-size: clamp(32px,5vw,54px);
     font-weight: 950;
-    letter-spacing: -1.4px;
-    line-height: 1.05;
+    letter-spacing: -1px;
+    line-height: 1.1;
     margin-bottom: 16px;
-    max-width: 900px;
 }
 
 .hero-subtitle {
-    font-size: 17px;
-    line-height: 1.75;
+    font-size: 16px;
+    line-height: 1.8;
     color: #f8fafc;
     max-width: 880px;
 }
@@ -94,184 +118,143 @@ show_html("""
     display: flex;
     gap: 10px;
     flex-wrap: wrap;
-    margin-top: 25px;
+    margin-top: 24px;
 }
 
 .badge {
-    background: rgba(255,255,255,0.20);
+    background: rgba(255,255,255,.18);
     color: white;
-    border: 1px solid rgba(255,255,255,0.32);
-    padding: 9px 15px;
+    border: 1px solid rgba(255,255,255,.3);
+    padding: 9px 14px;
     border-radius: 999px;
-    font-size: 13px;
+    font-size: 12px;
     font-weight: 900;
 }
 
 /* FEATURE CARDS */
 
 .feature-card {
-    background: rgba(255,255,255,0.92);
-    border: 1px solid rgba(255,255,255,0.92);
-    border-radius: 28px;
-    padding: 24px;
-    min-height: 160px;
-    box-shadow: 0 22px 55px rgba(15, 23, 42, 0.12);
-    transition: 0.25s ease;
-    position: relative;
-    overflow: hidden;
-}
-
-.feature-card::before {
-    content: "";
-    position: absolute;
-    inset: 0;
-    background: linear-gradient(135deg, rgba(37,99,235,0.08), rgba(236,72,153,0.08));
-    opacity: 0;
-    transition: 0.25s ease;
-}
-
-.feature-card:hover {
-    transform: translateY(-6px);
-    box-shadow: 0 32px 75px rgba(15, 23, 42, 0.18);
-}
-
-.feature-card:hover::before {
-    opacity: 1;
+    background: rgba(255,255,255,.95);
+    border: 1px solid white;
+    border-radius: 24px;
+    padding: 23px;
+    min-height: 165px;
+    box-shadow: 0 16px 42px rgba(15,23,42,.10);
+    margin-bottom: 15px;
 }
 
 .feature-icon {
-    width: 58px;
-    height: 58px;
-    border-radius: 20px;
+    width: 54px;
+    height: 54px;
+    border-radius: 18px;
     display: flex;
     align-items: center;
     justify-content: center;
-    font-size: 30px;
-    color: white;
-    margin-bottom: 16px;
-    position: relative;
+    font-size: 28px;
+    margin-bottom: 15px;
 }
 
 .icon-blue {
-    background: linear-gradient(135deg, #2563eb, #38bdf8);
+    background: linear-gradient(135deg,#2563eb,#38bdf8);
 }
 
 .icon-purple {
-    background: linear-gradient(135deg, #7c3aed, #a855f7);
+    background: linear-gradient(135deg,#7c3aed,#a855f7);
 }
 
 .icon-pink {
-    background: linear-gradient(135deg, #ec4899, #f97316);
+    background: linear-gradient(135deg,#ec4899,#f97316);
 }
 
 .feature-title {
     color: #111827;
-    font-size: 20px;
-    font-weight: 950;
+    font-size: 19px;
+    font-weight: 900;
     margin-bottom: 8px;
-    position: relative;
 }
 
 .feature-text {
     color: #4b5563;
     font-size: 14px;
     line-height: 1.65;
-    position: relative;
 }
 
 /* SECTION */
 
 .section-title {
     color: #111827;
-    font-size: 26px;
+    font-size: 25px;
     font-weight: 950;
-    margin-top: 12px;
-    margin-bottom: 15px;
+    margin-top: 10px;
+    margin-bottom: 16px;
 }
 
-/* INPUT PANEL */
+/* INPUT AND HELP PANELS */
 
 .input-panel {
-    background: rgba(255,255,255,0.94);
-    border: 1px solid rgba(255,255,255,0.95);
-    border-radius: 30px;
-    padding: 26px;
-    box-shadow: 0 26px 65px rgba(15,23,42,0.13);
+    background: rgba(255,255,255,.96);
+    border: 1px solid white;
+    border-radius: 26px;
+    padding: 24px;
+    box-shadow: 0 20px 50px rgba(15,23,42,.10);
     margin-bottom: 20px;
 }
 
 .help-card {
-    background:
-        linear-gradient(135deg, rgba(255,255,255,0.96), rgba(248,250,252,0.96));
+    background: white;
     color: #374151;
-    border: 1px solid rgba(255,255,255,0.95);
-    border-radius: 26px;
+    border: 1px solid #e5e7eb;
+    border-radius: 24px;
     padding: 22px;
-    line-height: 1.7;
-    font-size: 15px;
-    box-shadow: 0 18px 45px rgba(15,23,42,0.10);
+    line-height: 1.75;
+    font-size: 14px;
+    box-shadow: 0 15px 35px rgba(15,23,42,.08);
 }
 
 .help-title {
-    font-size: 21px;
+    font-size: 20px;
     font-weight: 950;
     color: #111827;
     margin-bottom: 10px;
 }
 
-/* METRIC CARDS */
+/* METRICS */
 
 .metric-card {
     background: white;
-    border-radius: 26px;
-    padding: 22px;
+    border-radius: 22px;
+    padding: 20px 12px;
     text-align: center;
     border: 1px solid #e5e7eb;
-    box-shadow: 0 20px 52px rgba(15,23,42,0.13);
-    position: relative;
-    overflow: hidden;
-}
-
-.metric-card::before {
-    content: "";
-    position: absolute;
-    height: 6px;
-    left: 0;
-    top: 0;
-    right: 0;
-    background: linear-gradient(90deg, #2563eb, #7c3aed, #ec4899);
+    box-shadow: 0 15px 35px rgba(15,23,42,.10);
+    margin-bottom: 12px;
 }
 
 .metric-label {
     color: #6b7280;
-    font-size: 13px;
-    font-weight: 950;
+    font-size: 12px;
+    font-weight: 900;
     margin-bottom: 8px;
 }
 
 .metric-value {
     color: #111827;
-    font-size: 34px;
+    font-size: clamp(21px,3vw,32px);
     font-weight: 950;
+    overflow-wrap: anywhere;
 }
 
-/* JOB CARD */
+/* JOB CARDS */
 
 .job-card {
     background: white;
-    border-radius: 30px;
-    padding: 28px 26px 26px 34px;
-    margin-bottom: 22px;
-    border: 1px solid rgba(255,255,255,0.95);
-    box-shadow: 0 25px 65px rgba(15,23,42,0.14);
+    border-radius: 25px;
+    padding: 26px 24px 24px 30px;
+    margin: 0 0 22px 0;
+    border: 1px solid #e5e7eb;
+    box-shadow: 0 18px 45px rgba(15,23,42,.12);
     position: relative;
-    overflow: hidden;
-    transition: 0.25s ease;
-}
-
-.job-card:hover {
-    transform: translateY(-6px);
-    box-shadow: 0 36px 85px rgba(15,23,42,0.20);
+    overflow-wrap: anywhere;
 }
 
 .job-card::before {
@@ -279,36 +262,34 @@ show_html("""
     position: absolute;
     left: 0;
     top: 0;
-    width: 9px;
+    width: 7px;
     height: 100%;
-    background: linear-gradient(180deg, #2563eb, #7c3aed, #ec4899, #10b981);
+    background: linear-gradient(180deg,#2563eb,#7c3aed,#ec4899,#10b981);
 }
 
 .job-rank {
-    position: absolute;
-    top: 20px;
-    right: 22px;
-    background: linear-gradient(135deg, #2563eb, #7c3aed);
+    float: right;
+    background: linear-gradient(135deg,#2563eb,#7c3aed);
     color: white;
-    font-weight: 950;
-    font-size: 13px;
-    padding: 8px 13px;
+    font-weight: 900;
+    font-size: 12px;
+    padding: 8px 12px;
     border-radius: 999px;
+    margin-left: 8px;
 }
 
 .job-title {
     color: #111827;
-    font-size: 27px;
+    font-size: clamp(21px,3vw,27px);
     font-weight: 950;
     margin-bottom: 7px;
-    padding-right: 80px;
 }
 
 .job-meta {
     color: #2563eb;
     font-size: 14px;
-    font-weight: 900;
-    margin-bottom: 14px;
+    font-weight: 850;
+    margin-bottom: 15px;
 }
 
 .job-desc {
@@ -327,7 +308,7 @@ show_html("""
 
 .score-bar {
     flex: 1;
-    height: 11px;
+    height: 10px;
     background: #e5e7eb;
     border-radius: 999px;
     overflow: hidden;
@@ -335,16 +316,17 @@ show_html("""
 
 .score-fill {
     height: 100%;
-    background: linear-gradient(90deg, #2563eb, #7c3aed, #ec4899);
+    background: linear-gradient(90deg,#2563eb,#7c3aed,#ec4899);
     border-radius: 999px;
 }
 
 .score-text {
     color: #7c3aed;
     font-weight: 950;
-    font-size: 15px;
-    width: 65px;
+    font-size: 14px;
+    width: 68px;
     text-align: right;
+    flex-shrink: 0;
 }
 
 .pill-row {
@@ -355,9 +337,9 @@ show_html("""
 }
 
 .pill {
-    padding: 8px 13px;
+    padding: 8px 12px;
     border-radius: 999px;
-    font-size: 13px;
+    font-size: 12px;
     font-weight: 900;
 }
 
@@ -376,65 +358,68 @@ show_html("""
     color: #3730a3;
 }
 
+/* SKILLS */
+
 .skill-grid {
     display: grid;
-    grid-template-columns: repeat(3, 1fr);
-    gap: 12px;
+    grid-template-columns: repeat(3,minmax(0,1fr));
+    gap: 11px;
     margin-top: 14px;
 }
 
 .skill-box {
-    border-radius: 20px;
-    padding: 15px;
+    border-radius: 17px;
+    padding: 14px;
     font-size: 13px;
-    line-height: 1.55;
-    min-height: 120px;
+    line-height: 1.65;
+    min-width: 0;
+    overflow-wrap: anywhere;
 }
 
 .skill-box b {
     display: block;
     margin-bottom: 8px;
-    font-size: 12px;
+    font-size: 11px;
     text-transform: uppercase;
-    letter-spacing: 0.06em;
+    letter-spacing: .05em;
 }
 
 .required {
-    background: linear-gradient(135deg, #eff6ff, #dbeafe);
+    background: linear-gradient(135deg,#eff6ff,#dbeafe);
     color: #1d4ed8;
     border: 1px solid #bfdbfe;
 }
 
 .matched {
-    background: linear-gradient(135deg, #ecfdf5, #d1fae5);
+    background: linear-gradient(135deg,#ecfdf5,#d1fae5);
     color: #047857;
     border: 1px solid #bbf7d0;
 }
 
 .missing {
-    background: linear-gradient(135deg, #fff7ed, #ffedd5);
+    background: linear-gradient(135deg,#fff7ed,#ffedd5);
     color: #c2410c;
     border: 1px solid #fed7aa;
 }
 
-/* EMPTY */
+/* EMPTY STATE */
 
 .empty-card {
     background: white;
-    border: 1px solid rgba(255,255,255,0.95);
-    border-radius: 30px;
-    padding: 42px;
+    border: 1px solid #e5e7eb;
+    border-radius: 26px;
+    padding: 35px 24px;
     text-align: center;
-    box-shadow: 0 24px 62px rgba(15,23,42,0.13);
+    box-shadow: 0 18px 45px rgba(15,23,42,.10);
 }
 
 .empty-icon {
-    font-size: 54px;
-    margin-bottom: 14px;
+    font-size: 48px;
+    margin-bottom: 12px;
 }
 
 .empty-title {
-    font-size: 26px;
+    font-size: 23px;
     font-weight: 950;
     color: #111827;
     margin-bottom: 10px;
@@ -443,99 +428,122 @@ show_html("""
 .empty-text {
     color: #4b5563;
     line-height: 1.7;
-    margin-bottom: 18px;
+    margin-bottom: 17px;
 }
 
 .sample-chip {
-    background: linear-gradient(135deg, #2563eb, #7c3aed, #ec4899);
+    background: linear-gradient(135deg,#2563eb,#7c3aed,#ec4899);
     color: white;
     display: inline-block;
-    padding: 11px 18px;
+    padding: 10px 15px;
     border-radius: 999px;
     font-weight: 900;
-    font-size: 13px;
+    font-size: 12px;
 }
 
-/* STREAMLIT WIDGETS */
+/* STREAMLIT INPUTS */
 
 .stRadio label,
 .stSelectbox label,
 .stSlider label,
 .stTextArea label {
     color: #111827 !important;
-    font-weight: 900 !important;
-}
-
-[data-testid="stRadio"] label p {
-    color: #111827 !important;
-    font-weight: 700 !important;
+    font-weight: 850 !important;
 }
 
 .stTextArea textarea {
-    border-radius: 18px !important;
+    border-radius: 15px !important;
     border: 1px solid #a78bfa !important;
-    box-shadow: 0 10px 25px rgba(124,58,237,0.12);
 }
 
 div[data-baseweb="select"] > div {
-    border-radius: 18px !important;
+    border-radius: 15px !important;
     border: 1px solid #a78bfa !important;
-    box-shadow: 0 10px 25px rgba(124,58,237,0.12);
 }
 
 .stButton > button {
-    background: linear-gradient(135deg, #2563eb, #7c3aed, #ec4899) !important;
+    background: linear-gradient(135deg,#2563eb,#7c3aed,#ec4899) !important;
     color: white !important;
     border: none !important;
-    border-radius: 18px !important;
-    padding: 15px 20px !important;
-    font-weight: 950 !important;
+    border-radius: 15px !important;
+    padding: 13px 18px !important;
+    font-weight: 900 !important;
     width: 100%;
-    box-shadow: 0 18px 42px rgba(124,58,237,0.34);
-    transition: 0.22s ease !important;
-}
-
-.stButton > button:hover {
-    transform: translateY(-2px);
-    box-shadow: 0 25px 55px rgba(124,58,237,0.45);
 }
 
 .footer {
     text-align: center;
     color: #6b7280;
-    font-size: 13px;
-    margin-top: 30px;
+    font-size: 12px;
+    margin-top: 28px;
+    padding-bottom: 10px;
 }
 
 @media (max-width: 900px) {
     .skill-grid {
         grid-template-columns: 1fr;
     }
+
+    .hero {
+        padding: 25px;
+        border-radius: 23px;
+    }
+
+    .input-panel {
+        padding: 18px;
+    }
+
+    .job-card {
+        padding: 23px 16px 20px 23px;
+    }
 }
 </style>
 """)
 
-# ---------------- LOAD ----------------
+
+# =========================================================
+# LOAD RECOMMENDER
+# =========================================================
 
 @st.cache_resource
 def load_recommender():
     return JobRecommender()
 
-recommender = load_recommender()
+
+try:
+    recommender = load_recommender()
+except Exception as exc:
+    st.error(
+        "The recommendation engine could not start. "
+        "Check that jobs.csv is committed in the "
+        "Task_4_Recommendation_System folder."
+    )
+    st.exception(exc)
+    st.stop()
+
 
 if "recommendations" not in st.session_state:
     st.session_state.recommendations = None
 
-# ---------------- HERO ----------------
+
+# =========================================================
+# HERO
+# =========================================================
 
 show_html("""
 <div class="hero">
     <div class="hero-kicker">AI-Powered Career Matching</div>
-    <div class="hero-title">Smart Job Recommendation System</div>
-    <div class="hero-subtitle">
-        A colorful HR-tech dashboard that recommends suitable job roles using candidate skills,
-        experience level, preferred location, TF-IDF vectorization, cosine similarity, and skill gap analysis.
+
+    <div class="hero-title">
+        Smart Job Recommendation System
     </div>
+
+    <div class="hero-subtitle">
+        Discover suitable job opportunities using your skills,
+        preferred location, experience level, and intelligent
+        content-based recommendations.
+    </div>
+
     <div class="badge-row">
         <div class="badge">Content-Based Filtering</div>
         <div class="badge">TF-IDF Vectorization</div>
@@ -546,7 +554,10 @@ show_html("""
 </div>
 """)
 
-# ---------------- FEATURE CARDS ----------------
+
+# =========================================================
+# FEATURE CARDS
+# =========================================================
 
 c1, c2, c3 = st.columns(3, gap="large")
 
@@ -556,7 +567,8 @@ with c1:
         <div class="feature-icon icon-blue">🎯</div>
         <div class="feature-title">Personalized Matching</div>
         <div class="feature-text">
-            Finds jobs based on candidate skills, preferred role, experience level, and location.
+            Finds jobs based on candidate skills, preferred role,
+            experience level, and location.
         </div>
     </div>
     """)
@@ -567,7 +579,8 @@ with c2:
         <div class="feature-icon icon-purple">📊</div>
         <div class="feature-title">Match Score</div>
         <div class="feature-text">
-            Calculates similarity between candidate profile and job requirements using cosine similarity.
+            Combines skill overlap and text similarity to estimate
+            how closely a job matches your profile.
         </div>
     </div>
     """)
@@ -578,113 +591,249 @@ with c3:
         <div class="feature-icon icon-pink">🧠</div>
         <div class="feature-title">Skill Gap Analysis</div>
         <div class="feature-text">
-            Shows matched skills and missing skills so candidates know what to improve.
+            Highlights matching and missing skills to help you
+            plan your next learning steps.
         </div>
     </div>
     """)
 
+
 st.write("")
 
-# ---------------- LAYOUT ----------------
+
+# =========================================================
+# MAIN LAYOUT
+# =========================================================
 
 left, right = st.columns([0.9, 1.1], gap="large")
 
+
+# =========================================================
+# CANDIDATE PREFERENCES
+# =========================================================
+
 with left:
-    show_html('<div class="section-title">Candidate Preferences</div>')
+
+    show_html(
+        '<div class="section-title">Candidate Preferences</div>'
+    )
+
     show_html('<div class="input-panel">')
 
     mode = st.radio(
         "Recommendation Mode",
-        ["Recommend by Skills", "Recommend by Job Role"]
+        [
+            "Recommend by Skills",
+            "Recommend by Job Role",
+        ],
     )
 
     top_n = st.slider(
         "Number of recommendations",
         min_value=3,
         max_value=8,
-        value=5
+        value=5,
     )
 
     locations = ["All"] + recommender.get_locations()
-    experience_levels = ["All"] + recommender.get_experience_levels()
 
-    location_filter = st.selectbox("Preferred Location", locations)
-    experience_filter = st.selectbox("Experience Level", experience_levels)
+    experience_levels = (
+        ["All"] + recommender.get_experience_levels()
+    )
+
+    location_filter = st.selectbox(
+        "Preferred Location",
+        locations,
+    )
+
+    experience_filter = st.selectbox(
+        "Experience Level",
+        experience_levels,
+    )
 
     if mode == "Recommend by Skills":
+
         user_skills = st.text_area(
             "Enter your skills",
-            placeholder="Example: Python SQL Machine Learning",
-            height=120
+            placeholder=(
+                "Example: Python, SQL, Pandas, "
+                "Machine Learning, HTML, CSS"
+            ),
+            height=120,
         )
 
-        if st.button("Find Matching Jobs"):
-            st.session_state.recommendations = recommender.recommend_by_skills(
-                user_skills,
-                top_n,
-                location_filter,
-                experience_filter
-            )
+        if st.button(
+            "Find Matching Jobs",
+            key="find_jobs_by_skills",
+        ):
+
+            if not user_skills.strip():
+
+                st.warning(
+                    "Please enter at least one skill "
+                    "before searching."
+                )
+
+            else:
+
+                try:
+                    st.session_state.recommendations = (
+                        recommender.recommend_by_skills(
+                            user_skills,
+                            top_n,
+                            location_filter,
+                            experience_filter,
+                        )
+                    )
+
+                except Exception as exc:
+                    st.error(
+                        "Unable to generate skill-based recommendations."
+                    )
+                    st.exception(exc)
 
     else:
+
         selected_job = st.selectbox(
             "Select a job role you like",
-            recommender.get_job_titles()
+            recommender.get_job_titles(),
         )
 
-        selected_details = recommender.get_job_details(selected_job)
+        selected_details = recommender.get_job_details(
+            selected_job
+        )
 
         if selected_details is not None:
-            st.info(f"Selected Role: {selected_details['job_title']}")
-            st.write(f"**Company:** {selected_details['company']}")
-            st.write(f"**Location:** {selected_details['location']}")
-            st.write(f"**Experience:** {selected_details['experience_level']}")
-            st.write(f"**Required Skills:** {selected_details['skills']}")
-            st.write(selected_details["description"])
 
-        if st.button("Find Similar Jobs"):
-            st.session_state.recommendations = recommender.recommend_by_job_title(
-                selected_job,
-                top_n,
-                location_filter,
-                experience_filter
+            st.info(
+                f"Selected Role: "
+                f"{selected_details['job_title']}"
             )
 
-    show_html('</div>')
+            st.write(
+                f"**Company:** "
+                f"{selected_details['company']}"
+            )
+
+            st.write(
+                f"**Location:** "
+                f"{selected_details['location']}"
+            )
+
+            st.write(
+                f"**Experience:** "
+                f"{selected_details['experience_level']}"
+            )
+
+            st.write(
+                f"**Required Skills:** "
+                f"{selected_details['skills']}"
+            )
+
+            st.write(
+                selected_details["description"]
+            )
+
+        if st.button(
+            "Find Similar Jobs",
+            key="find_jobs_by_role",
+        ):
+
+            try:
+                st.session_state.recommendations = (
+                    recommender.recommend_by_job_title(
+                        selected_job,
+                        top_n,
+                        location_filter,
+                        experience_filter,
+                    )
+                )
+
+            except Exception as exc:
+                st.error(
+                    "Unable to generate role-based recommendations."
+                )
+                st.exception(exc)
+
+    show_html("</div>")
 
     show_html("""
     <div class="help-card">
         <div class="help-title">⚙️ How the engine works</div>
-        The system combines job title, required skills, experience level, location, and job description.
-        TF-IDF converts the text into numerical vectors. Cosine similarity compares jobs and returns
-        the closest matches. Skill gap analysis shows matched and missing skills.
+
+        The system combines job titles, required skills,
+        experience levels, locations, and descriptions.
+        TF-IDF converts job information into numerical vectors.
+        Cosine similarity compares textual features, while
+        skill-gap analysis identifies skills that may need
+        improvement. Location and experience filters narrow
+        the results.
     </div>
     """)
 
+
+# =========================================================
+# RECOMMENDATION RESULTS
+# =========================================================
+
 with right:
-    show_html('<div class="section-title">Recommended Jobs</div>')
+
+    show_html(
+        '<div class="section-title">Recommended Jobs</div>'
+    )
 
     recommendations = st.session_state.recommendations
 
     if recommendations is None:
+
         show_html("""
         <div class="empty-card">
             <div class="empty-icon">🔍</div>
             <div class="empty-title">No recommendations yet</div>
             <div class="empty-text">
-                Enter your skills or choose a job role, then click the recommendation button.
+                Enter your skills or choose a job role,
+                then click the recommendation button.
             </div>
-            <div class="sample-chip">Try: Python SQL Machine Learning</div>
+            <div class="sample-chip">
+                Try: Python, SQL, Machine Learning
+            </div>
         </div>
         """)
 
     elif recommendations.empty:
-        st.warning("No matching jobs found. Try changing location, experience level, or skills.")
+
+        st.warning(
+            "No matching jobs found. Try changing your skills, "
+            "location, or experience level."
+        )
 
     else:
+
+        # Check the expected columns
+        if "match_score" not in recommendations.columns:
+
+            st.error(
+                "The recommendation engine did not return "
+                "the required match_score column. "
+                "Check recommender.py."
+            )
+            st.stop()
+
         result_count = len(recommendations)
-        avg_score = round(recommendations["match_score"].mean(), 2)
-        best_score = round(recommendations["match_score"].max(), 2)
+
+        avg_score = round(
+            recommendations["match_score"].apply(
+                format_score
+            ).mean(),
+            2,
+        )
+
+        best_score = round(
+            recommendations["match_score"].apply(
+                format_score
+            ).max(),
+            2,
+        )
 
         m1, m2, m3 = st.columns(3)
 
@@ -714,52 +863,120 @@ with right:
 
         st.write("")
 
-        for rank, (_, row) in enumerate(recommendations.iterrows(), start=1):
-            score = float(row["match_score"])
-            score_width = max(min(score, 100), 0)
+        # Render each recommendation as an HTML job card
+        for rank, (_, row) in enumerate(
+            recommendations.iterrows(),
+            start=1,
+        ):
+
+            score = format_score(row.get("match_score", 0))
+
+            job_title = safe_text(
+                row.get("job_title")
+            )
+
+            company = safe_text(
+                row.get("company")
+            )
+
+            location = safe_text(
+                row.get("location")
+            )
+
+            experience = safe_text(
+                row.get("experience_level")
+            )
+
+            description = safe_text(
+                row.get("description")
+            )
+
+            required_skills = safe_text(
+                row.get("skills")
+            )
+
+            matched_skills = safe_text(
+                row.get("matched_skills", "N/A")
+            )
+
+            missing_skills = safe_text(
+                row.get("missing_skills", "N/A")
+            )
 
             show_html(f"""
             <div class="job-card">
+
                 <div class="job-rank">#{rank}</div>
-                <div class="job-title">{row["job_title"]}</div>
-                <div class="job-meta">{row["company"]} · {row["location"]}</div>
+
+                <div class="job-title">
+                    {job_title}
+                </div>
+
+                <div class="job-meta">
+                    {company} · {location}
+                </div>
 
                 <div class="score-wrap">
                     <div class="score-bar">
-                        <div class="score-fill" style="width: {score_width}%"></div>
+                        <div
+                            class="score-fill"
+                            style="width: {score}%"
+                        ></div>
                     </div>
-                    <div class="score-text">{score}%</div>
+
+                    <div class="score-text">
+                        {score:.2f}%
+                    </div>
                 </div>
 
-                <div class="job-desc">{row["description"]}</div>
+                <div class="job-desc">
+                    {description}
+                </div>
 
                 <div class="pill-row">
-                    <span class="pill pill-location">📍 {row["location"]}</span>
-                    <span class="pill pill-exp">⚡ {row["experience_level"]}</span>
-                    <span class="pill pill-score">Match {row["match_score"]}%</span>
+                    <span class="pill pill-location">
+                        📍 {location}
+                    </span>
+
+                    <span class="pill pill-exp">
+                        ⚡ {experience}
+                    </span>
+
+                    <span class="pill pill-score">
+                        Match {score:.2f}%
+                    </span>
                 </div>
 
                 <div class="skill-grid">
+
                     <div class="skill-box required">
                         <b>Required Skills</b>
-                        {row["skills"]}
+                        {required_skills}
                     </div>
+
                     <div class="skill-box matched">
                         <b>Matched Skills</b>
-                        {row.get("matched_skills", "N/A")}
+                        {matched_skills}
                     </div>
+
                     <div class="skill-box missing">
                         <b>Missing Skills</b>
-                        {row.get("missing_skills", "N/A")}
+                        {missing_skills}
                     </div>
+
                 </div>
+
             </div>
             """)
 
-# ---------------- FOOTER ----------------
+
+# =========================================================
+# FOOTER
+# =========================================================
 
 show_html("""
 <div class="footer">
-    Built using Python · Streamlit · Pandas · TF-IDF · Cosine Similarity · Skill Gap Analysis
+    Built using Python · Streamlit · Pandas · TF-IDF ·
+    Cosine Similarity · Skill Gap Analysis
 </div>
 """)
